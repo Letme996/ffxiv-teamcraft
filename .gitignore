@@ -1,8 +1,15 @@
+service-account.json
+service-account-beta.json
+lists.json
+ssr/output
+functions/dist
+*.log
 # See http://help.github.com/ignore-files/ for more about ignoring files.
 
-src/environments/version.ts
+apps/client/src/environments/version.ts
 
 # compiled output
+/release
 /dist
 /tmp
 /out-tsc
@@ -18,8 +25,11 @@ src/environments/version.ts
 *.launch
 .settings/
 *.sublime-workspace
+.ignore
+.vimrc
 
 # IDE - VSCode
+.vs
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
