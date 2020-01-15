@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { LayoutsFacade } from '../../../core/layout/+state/layouts.facade';
 import { ListsFacade } from '../../../modules/list/+state/lists.facade';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -6,7 +6,7 @@ import { filter, first, map, mergeMap, shareReplay, switchMap, takeUntil, tap } 
 import { BehaviorSubject, combineLatest, Observable, Subject } from 'rxjs';
 import { LayoutRowDisplay } from '../../../core/layout/layout-row-display';
 import { List } from '../../../modules/list/model/list';
-import { ListRow } from '../../../modules/list/model/list-row';
+import { getItemSource, ListRow } from '../../../modules/list/model/list-row';
 import { NzMessageService, NzModalService } from 'ng-zorro-antd';
 import { NameQuestionPopupComponent } from '../../../modules/name-question-popup/name-question-popup/name-question-popup.component';
 import { TranslateService } from '@ngx-translate/core';
@@ -36,11 +36,15 @@ import { MediaObserver } from '@angular/flex-layout';
 import { ListContributionsComponent } from '../list-contributions/list-contributions.component';
 import * as _ from 'lodash';
 import { IpcService } from '../../../core/electron/ipc.service';
+import { InventoryFacade } from '../../../modules/inventory/+state/inventory.facade';
+import { SettingsService } from '../../../modules/settings/settings.service';
+import { DataType } from '../../../modules/list/data/data-type';
 
 @Component({
   selector: 'app-list-details',
   templateUrl: './list-details.component.html',
-  styleUrls: ['./list-details.component.less']
+  styleUrls: ['./list-details.component.less'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ListDetailsComponent extends TeamcraftPageComponent implements OnInit, OnDestroy {
 
@@ -80,6 +84,8 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
 
   public machinaToggle = false;
 
+  public pinnedList$ = this.listsFacade.pinnedList$;
+
   public get adaptativeFilter(): boolean {
     return this.adaptativeFilter$.value;
   }
@@ -98,7 +104,8 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
               private teamsFacade: TeamsFacade, private authFacade: AuthFacade,
               private discordWebhookService: DiscordWebhookService, private i18nTools: I18nToolsService,
               private l12n: LocalizedDataService, private linkTools: LinkToolsService, protected seoService: SeoService,
-              private media: MediaObserver, public ipc: IpcService) {
+              private media: MediaObserver, public ipc: IpcService, private inventoryFacade: InventoryFacade,
+              public settings: SettingsService) {
     super(seoService);
     this.ipc.once('toggle-machina:value', (event, value) => {
       this.machinaToggle = value;
@@ -146,17 +153,6 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
       .pipe(
         map(([team, userId, permissionsLevel]) => team.leader === userId || permissionsLevel >= PermissionLevel.OWNER)
       );
-
-    combineLatest([this.list$, this.listsFacade.compacts$]).pipe(
-      filter(([list, compacts]) => list.notFound && compacts.some(l => l.$key === list.$key)),
-      switchMap(([list, compacts]) => {
-        const listCompact = compacts.find(l => l.$key === list.$key);
-        return this.listManager.upgradeList(listCompact);
-      }),
-      takeUntil(this.onDestroy$)
-    ).subscribe(regeneratedList => {
-      this.listsFacade.updateList(regeneratedList);
-    });
 
     combineLatest([this.list$, this.teamsFacade.allTeams$, this.teamsFacade.selectedTeam$]).pipe(
       takeUntil(this.onDestroy$)
@@ -271,7 +267,7 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
           if (row.id < 20) {
             return;
           }
-          listAlarms.push(...row.alarms.filter(alarm => {
+          listAlarms.push(...(row.alarms || []).filter(alarm => {
             // Avoid duplicates.
             return listAlarms.find(a => a.itemId === alarm.itemId && a.zoneId === alarm.zoneId) === undefined;
           }));
@@ -290,7 +286,7 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
     this.listsFacade.updateList(list);
     this.listsFacade.addList(clone);
     this.progressService.showProgress(this.listsFacade.myLists$.pipe(
-      map(lists => lists.find(l => l.createdAt === clone.createdAt && l.$key !== undefined)),
+      map(lists => lists.find(l => l.createdAt.toMillis() === clone.createdAt.toMillis() && l.$key !== undefined)),
       filter(l => l !== undefined),
       first()
     ), 1, 'List_fork_in_progress').pipe(first()).subscribe(l => {
@@ -390,11 +386,62 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
     });
   }
 
-  openHistoryPopup(list: List): void {
+  openHistoryPopup(): void {
     this.dialog.create({
       nzTitle: this.translate.instant('LIST.History'),
       nzFooter: null,
       nzContent: ListHistoryPopupComponent
+    });
+  }
+
+  public fillWithInventory(list: List): void {
+    this.inventoryFacade.inventory$.pipe(
+      first(),
+      map(inventory => {
+        list.items.forEach(item => {
+          const inventoryItems = inventory.getItem(item.id, true);
+          if (inventoryItems.length > 0) {
+            const totalAmount = inventoryItems.reduce((total, i) => total + i.quantity, 0);
+            list.setDone(item.id, Math.min(item.done + totalAmount, item.amount), true);
+          }
+        });
+        list.finalItems.forEach(item => {
+          const inventoryItems = inventory.getItem(item.id, true);
+          if (inventoryItems.length > 0) {
+            const totalAmount = inventoryItems.reduce((total, i) => total + i.quantity, 0);
+            list.setDone(item.id, Math.min(item.done + totalAmount, item.amount), false, true);
+          }
+        });
+        list.updateAllStatuses();
+        return list;
+      })
+    ).subscribe(res => {
+      this.listsFacade.updateList(res);
+    });
+  }
+
+  public syncWithInventory(list: List): void {
+    this.inventoryFacade.inventory$.pipe(
+      first(),
+      map(inventory => {
+        list.items.forEach(item => {
+          const inventoryItems = inventory.getItem(item.id, true);
+          if (inventoryItems.length > 0) {
+            const totalAmount = inventoryItems.reduce((total, i) => total + i.quantity, 0);
+            list.setDone(item.id, Math.min(totalAmount, item.amount), true);
+          }
+        });
+        list.finalItems.forEach(item => {
+          const inventoryItems = inventory.getItem(item.id, true);
+          if (inventoryItems.length > 0) {
+            const totalAmount = inventoryItems.reduce((total, i) => total + i.quantity, 0);
+            list.setDone(item.id, Math.min(totalAmount, item.amount), false, true);
+          }
+        });
+        return list;
+      })
+    ).subscribe(res => {
+      this.listsFacade.updateList(res);
     });
   }
 
@@ -420,6 +467,14 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
         };
       })
     );
+  }
+
+  public pinList(list: List): void {
+    this.listsFacade.pin(list.$key);
+  }
+
+  public unpinList(): void {
+    this.listsFacade.unpin();
   }
 
 }

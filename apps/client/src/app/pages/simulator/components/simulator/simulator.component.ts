@@ -1,19 +1,7 @@
 import { ChangeDetectorRef, Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { BehaviorSubject, combineLatest, merge, Observable, ReplaySubject, Subject } from 'rxjs';
 import { Craft } from '../../../../model/garland-tools/craft';
-import {
-  debounceTime,
-  distinctUntilChanged,
-  filter,
-  first,
-  map,
-  pairwise,
-  shareReplay,
-  startWith,
-  switchMap,
-  takeUntil,
-  tap
-} from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, filter, first, map, pairwise, shareReplay, startWith, switchMap, takeUntil, tap } from 'rxjs/operators';
 import { HtmlToolsService } from '../../../../core/tools/html-tools.service';
 import { AuthFacade } from '../../../../+state/auth.facade';
 import { Item } from '../../../../model/garland-tools/item';
@@ -61,6 +49,7 @@ import {
   CraftingActionsRegistry,
   CraftingJob,
   EffectiveBuff,
+  FinalAppraisal,
   GearSet,
   Simulation,
   SimulationReliabilityReport,
@@ -173,6 +162,10 @@ export class SimulatorComponent implements OnInit, OnDestroy {
 
   public dirty = false;
 
+  public savedSet = true;
+
+  private formChangesSubscription: any;
+
   // HQ ingredients
   private hqIngredients$: BehaviorSubject<{ id: number, amount: number }[]> =
     new BehaviorSubject<{ id: number, amount: number }[]>([]);
@@ -196,10 +189,10 @@ export class SimulatorComponent implements OnInit, OnDestroy {
   private stepStates$: BehaviorSubject<{ [index: number]: StepState }> = new BehaviorSubject<{ [index: number]: StepState }>({});
 
   private findActionsRegex: RegExp =
-    new RegExp(/\/(ac|action|aaction|gaction|generalaction)[\s]+((\w|[\u3000-\u303F]|[\u3040-\u309F]|[\u30A0-\u30FF]|[\uFF00-\uFFEF]|[\u4E00-\u9FAF]|[\u2605-\u2606]|[\u2190-\u2195]|\u203B)+|"[^"]+")?.*/, 'i');
+    new RegExp(/\/(ac|action|aaction|gaction|generalaction|statusoff)[\s]+((\w|[éàèç]|[\u3000-\u303F]|[\u3040-\u309F]|[\u30A0-\u30FF]|[\uFF00-\uFFEF]|[\u4E00-\u9FAF]|[\u2605-\u2606]|[\u2190-\u2195]|\u203B)+|"[^"]+")?.*/, 'i');
 
   private findActionsAutoTranslatedRegex: RegExp =
-    new RegExp(/\/(ac|action|aaction|gaction|generalaction)[\s]+([^<]+)?.*/, 'i');
+    new RegExp(/\/(ac|action|aaction|gaction|generalaction|statusoff)[\s]+([^<]+)?.*/, 'i');
 
   private statsFromRotationApplied = false;
 
@@ -372,7 +365,10 @@ export class SimulatorComponent implements OnInit, OnDestroy {
         filter(res => res !== undefined && res !== null && res.length > 0 && res.indexOf('[') > -1),
         map(res => CraftingActionsRegistry.importFromCraftOpt(JSON.parse(res))),
         first()
-      ).subscribe(actions => this.actions$.next(actions));
+      ).subscribe(actions => {
+      this.actions$.next(actions);
+      this.stepStates$.next({});
+    });
   }
 
   openMacroPopup(simulation: Simulation): void {
@@ -439,6 +435,12 @@ export class SimulatorComponent implements OnInit, OnDestroy {
             let match = this.findActionsRegex.exec(line);
             if (match !== null && match !== undefined) {
               const skillName = match[2].replace(/"/g, '');
+
+              if (line.startsWith('/statusoff') && skillName === this.i18nTools.getName(this.localizedDataService.getAction(new FinalAppraisal().getIds()[0]))) {
+                actionIds.push(-1);
+                continue;
+              }
+
               // Get translated skill
               try {
                 actionIds
@@ -455,7 +457,6 @@ export class SimulatorComponent implements OnInit, OnDestroy {
                         <Language>this.translate.currentLang));
                   }
                 } catch (ignoredAgain) {
-                  break;
                 }
               }
             }
@@ -464,7 +465,10 @@ export class SimulatorComponent implements OnInit, OnDestroy {
         }),
         map(actionIds => CraftingActionsRegistry.createFromIds(actionIds)),
         first()
-      ).subscribe(actions => this.actions$.next(actions));
+      ).subscribe(actions => {
+      this.actions$.next(actions);
+      this.stepStates$.next({});
+    });
   }
 
   saveRotation(rotation: CraftingRotation): void {
@@ -519,6 +523,11 @@ export class SimulatorComponent implements OnInit, OnDestroy {
       const actions = this.actions$.value;
       actions.splice(index, 0, action);
       this.actions$.next([...actions]);
+      const stepStates = { ...this.stepStates$.value };
+      for (let i = index; i < actions.length; i++) {
+        delete stepStates[i];
+      }
+      this.stepStates$.next(stepStates);
     }
     this.dirty = true;
     this.dirtyFacade.addEntry('simulator', DirtyScope.PAGE);
@@ -550,6 +559,11 @@ export class SimulatorComponent implements OnInit, OnDestroy {
     const actions = this.actions$.value;
     actions.splice(index, 1);
     this.actions$.next([...actions]);
+    const stepStates = { ...this.stepStates$.value };
+    for (let i = index; i < actions.length; i++) {
+      delete stepStates[i];
+    }
+    this.stepStates$.next(stepStates);
     this.dirty = true;
     this.dirtyFacade.addEntry('simulator', DirtyScope.PAGE);
   }
@@ -590,6 +604,7 @@ export class SimulatorComponent implements OnInit, OnDestroy {
       specialist: rawForm.specialist
     };
     this.authFacade.saveSet(set);
+    this.savedSet = true;
   }
 
   saveDefaultConsumables(): void {
@@ -749,6 +764,8 @@ export class SimulatorComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.formChangesSubscription.unsubscribe();
+
     this.onDestroy$.next(null);
   }
 
@@ -864,6 +881,7 @@ export class SimulatorComponent implements OnInit, OnDestroy {
     ).subscribe(([rotation, stats, rotationChanged]: [CraftingRotation, CrafterStats, boolean]) => {
       if (this.actions$.value.length === 0 || rotationChanged) {
         this.actions$.next(CraftingActionsRegistry.deserializeRotation(rotation.rotation));
+        this.stepStates$.next({});
       }
       if (rotation.food && this.selectedFood === undefined) {
         this.selectedFood = this.foods.find(f => rotation.food && f.itemId === rotation.food.id && f.hq === rotation.food.hq);
@@ -924,6 +942,10 @@ export class SimulatorComponent implements OnInit, OnDestroy {
         return this.rotationTipsService.getTips(result);
       })
     );
+
+    this.formChangesSubscription = this.statsForm.valueChanges.subscribe(() => {
+      this.savedSet = false;
+    });
   }
 
 }

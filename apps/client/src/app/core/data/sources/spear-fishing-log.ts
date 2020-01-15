@@ -7,8 +7,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2511,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 32.5908203125,
+      "y": 29.7080078125
     }
   },
   {
@@ -19,8 +19,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2511,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 32.5908203125,
+      "y": 29.7080078125
     }
   },
   {
@@ -31,8 +31,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2511,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 32.5908203125,
+      "y": 29.7080078125
     }
   },
   {
@@ -43,8 +43,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2511,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 32.5908203125,
+      "y": 29.7080078125
     }
   },
   {
@@ -55,8 +55,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2511,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 32.5908203125,
+      "y": 29.7080078125
     }
   },
   {
@@ -67,8 +67,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2511,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 32.5908203125,
+      "y": 29.7080078125
     }
   },
   {
@@ -79,8 +79,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2512,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 27.90625,
+      "y": 11.330078125
     }
   },
   {
@@ -91,8 +91,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2512,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 27.90625,
+      "y": 11.330078125
     }
   },
   {
@@ -103,8 +103,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2512,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 27.90625,
+      "y": 11.330078125
     }
   },
   {
@@ -115,8 +115,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2512,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 27.90625,
+      "y": 11.330078125
     }
   },
   {
@@ -127,8 +127,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2512,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 27.90625,
+      "y": 11.330078125
     }
   },
   {
@@ -139,8 +139,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2512,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 27.90625,
+      "y": 11.330078125
     }
   },
   {
@@ -151,8 +151,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2513,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 17.576171875,
+      "y": 20.298828125
     }
   },
   {
@@ -163,8 +163,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2513,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 17.576171875,
+      "y": 20.298828125
     }
   },
   {
@@ -175,8 +175,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2513,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 17.576171875,
+      "y": 20.298828125
     }
   },
   {
@@ -187,8 +187,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2513,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 17.576171875,
+      "y": 20.298828125
     }
   },
   {
@@ -199,8 +199,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2513,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 17.576171875,
+      "y": 20.298828125
     }
   },
   {
@@ -211,8 +211,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2513,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 17.576171875,
+      "y": 20.298828125
     }
   },
   {
@@ -223,8 +223,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2514,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 16.375,
+      "y": 24.623046875
     }
   },
   {
@@ -235,8 +235,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2514,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 16.375,
+      "y": 24.623046875
     }
   },
   {
@@ -247,8 +247,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2514,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 16.375,
+      "y": 24.623046875
     }
   },
   {
@@ -259,8 +259,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2514,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 16.375,
+      "y": 24.623046875
     }
   },
   {
@@ -271,8 +271,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2514,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 16.375,
+      "y": 24.623046875
     }
   },
   {
@@ -283,8 +283,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2514,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 16.375,
+      "y": 24.623046875
     }
   },
   {
@@ -295,8 +295,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2515,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 4.84375,
+      "y": 37.0751953125
     }
   },
   {
@@ -307,8 +307,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2515,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 4.84375,
+      "y": 37.0751953125
     }
   },
   {
@@ -319,8 +319,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2515,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 4.84375,
+      "y": 37.0751953125
     }
   },
   {
@@ -331,8 +331,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2515,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 4.84375,
+      "y": 37.0751953125
     }
   },
   {
@@ -343,8 +343,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2515,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 4.84375,
+      "y": 37.0751953125
     }
   },
   {
@@ -355,8 +355,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2515,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 4.84375,
+      "y": 37.0751953125
     }
   },
   {
@@ -367,8 +367,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2516,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 38.876953125,
+      "y": 6.28515625
     }
   },
   {
@@ -379,8 +379,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2516,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 38.876953125,
+      "y": 6.28515625
     }
   },
   {
@@ -391,8 +391,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2516,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 38.876953125,
+      "y": 6.28515625
     }
   },
   {
@@ -403,8 +403,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2516,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 38.876953125,
+      "y": 6.28515625
     }
   },
   {
@@ -415,8 +415,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2516,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 38.876953125,
+      "y": 6.28515625
     }
   },
   {
@@ -427,8 +427,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2516,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 38.876953125,
+      "y": 6.28515625
     }
   },
   {
@@ -439,8 +439,8 @@ export const spearFishingLog = [
     "placeId": 2409,
     "zoneId": 2516,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 38.876953125,
+      "y": 6.28515625
     }
   },
   {
@@ -451,8 +451,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2517,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 15.09375,
+      "y": 37.515625
     }
   },
   {
@@ -463,8 +463,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2517,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 15.09375,
+      "y": 37.515625
     }
   },
   {
@@ -475,8 +475,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2517,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 15.09375,
+      "y": 37.515625
     }
   },
   {
@@ -487,8 +487,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2517,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 15.09375,
+      "y": 37.515625
     }
   },
   {
@@ -499,8 +499,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2517,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 15.09375,
+      "y": 37.515625
     }
   },
   {
@@ -511,8 +511,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2517,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 15.09375,
+      "y": 37.515625
     }
   },
   {
@@ -523,8 +523,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2518,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 21.4599609375,
+      "y": 36.6748046875
     }
   },
   {
@@ -535,8 +535,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2518,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 21.4599609375,
+      "y": 36.6748046875
     }
   },
   {
@@ -547,8 +547,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2518,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 21.4599609375,
+      "y": 36.6748046875
     }
   },
   {
@@ -559,8 +559,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2518,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 21.4599609375,
+      "y": 36.6748046875
     }
   },
   {
@@ -571,8 +571,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2518,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 21.4599609375,
+      "y": 36.6748046875
     }
   },
   {
@@ -583,8 +583,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2518,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 21.4599609375,
+      "y": 36.6748046875
     }
   },
   {
@@ -595,8 +595,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2519,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 34.79296875,
+      "y": 36.5546875
     }
   },
   {
@@ -607,8 +607,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2519,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 34.79296875,
+      "y": 36.5546875
     }
   },
   {
@@ -619,8 +619,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2519,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 34.79296875,
+      "y": 36.5546875
     }
   },
   {
@@ -631,8 +631,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2519,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 34.79296875,
+      "y": 36.5546875
     }
   },
   {
@@ -643,8 +643,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2519,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 34.79296875,
+      "y": 36.5546875
     }
   },
   {
@@ -655,8 +655,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2519,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 34.79296875,
+      "y": 36.5546875
     }
   },
   {
@@ -667,8 +667,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2520,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 9.888671875,
+      "y": 34.232421875
     }
   },
   {
@@ -679,8 +679,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2520,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 9.888671875,
+      "y": 34.232421875
     }
   },
   {
@@ -691,8 +691,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2520,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 9.888671875,
+      "y": 34.232421875
     }
   },
   {
@@ -703,8 +703,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2520,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 9.888671875,
+      "y": 34.232421875
     }
   },
   {
@@ -715,8 +715,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2520,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 9.888671875,
+      "y": 34.232421875
     }
   },
   {
@@ -727,8 +727,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2520,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 9.888671875,
+      "y": 34.232421875
     }
   },
   {
@@ -739,8 +739,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2521,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 10.9296875,
+      "y": 10.689453125
     }
   },
   {
@@ -751,8 +751,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2521,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 10.9296875,
+      "y": 10.689453125
     }
   },
   {
@@ -763,8 +763,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2521,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 10.9296875,
+      "y": 10.689453125
     }
   },
   {
@@ -775,8 +775,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2521,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 10.9296875,
+      "y": 10.689453125
     }
   },
   {
@@ -787,8 +787,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2521,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 10.9296875,
+      "y": 10.689453125
     }
   },
   {
@@ -799,8 +799,8 @@ export const spearFishingLog = [
     "placeId": 2410,
     "zoneId": 2521,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 10.9296875,
+      "y": 10.689453125
     }
   },
   {
@@ -811,8 +811,8 @@ export const spearFishingLog = [
     "placeId": 2411,
     "zoneId": 2522,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 19.017578125,
+      "y": 23.021484375
     }
   },
   {
@@ -823,8 +823,8 @@ export const spearFishingLog = [
     "placeId": 2411,
     "zoneId": 2522,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 19.017578125,
+      "y": 23.021484375
     }
   },
   {
@@ -835,8 +835,8 @@ export const spearFishingLog = [
     "placeId": 2411,
     "zoneId": 2522,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 19.017578125,
+      "y": 23.021484375
     }
   },
   {
@@ -847,8 +847,8 @@ export const spearFishingLog = [
     "placeId": 2411,
     "zoneId": 2522,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 19.017578125,
+      "y": 23.021484375
     }
   },
   {
@@ -859,8 +859,8 @@ export const spearFishingLog = [
     "placeId": 2411,
     "zoneId": 2522,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 19.017578125,
+      "y": 23.021484375
     }
   },
   {
@@ -871,8 +871,8 @@ export const spearFishingLog = [
     "placeId": 2411,
     "zoneId": 2522,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 19.017578125,
+      "y": 23.021484375
     }
   },
   {
@@ -883,8 +883,8 @@ export const spearFishingLog = [
     "placeId": 2411,
     "zoneId": 2523,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 23.021484375,
+      "y": 23.021484375
     }
   },
   {
@@ -895,8 +895,8 @@ export const spearFishingLog = [
     "placeId": 2411,
     "zoneId": 2523,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 23.021484375,
+      "y": 23.021484375
     }
   },
   {
@@ -907,8 +907,8 @@ export const spearFishingLog = [
     "placeId": 2411,
     "zoneId": 2523,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 23.021484375,
+      "y": 23.021484375
     }
   },
   {
@@ -919,8 +919,8 @@ export const spearFishingLog = [
     "placeId": 2411,
     "zoneId": 2523,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 23.021484375,
+      "y": 23.021484375
     }
   },
   {
@@ -931,8 +931,8 @@ export const spearFishingLog = [
     "placeId": 2411,
     "zoneId": 2523,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 23.021484375,
+      "y": 23.021484375
     }
   },
   {
@@ -943,8 +943,8 @@ export const spearFishingLog = [
     "placeId": 2411,
     "zoneId": 2523,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 23.021484375,
+      "y": 23.021484375
     }
   },
   {
@@ -955,8 +955,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2524,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 13.892578125,
+      "y": 18.6171875
     }
   },
   {
@@ -967,8 +967,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2524,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 13.892578125,
+      "y": 18.6171875
     }
   },
   {
@@ -979,8 +979,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2524,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 13.892578125,
+      "y": 18.6171875
     }
   },
   {
@@ -991,8 +991,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2524,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 13.892578125,
+      "y": 18.6171875
     }
   },
   {
@@ -1003,8 +1003,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2524,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 13.892578125,
+      "y": 18.6171875
     }
   },
   {
@@ -1015,8 +1015,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2524,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 13.892578125,
+      "y": 18.6171875
     }
   },
   {
@@ -1027,8 +1027,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2525,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 20.8193359375,
+      "y": 23.021484375
     }
   },
   {
@@ -1039,8 +1039,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2525,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 20.8193359375,
+      "y": 23.021484375
     }
   },
   {
@@ -1051,8 +1051,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2525,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 20.8193359375,
+      "y": 23.021484375
     }
   },
   {
@@ -1063,8 +1063,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2525,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 20.8193359375,
+      "y": 23.021484375
     }
   },
   {
@@ -1075,8 +1075,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2525,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 20.8193359375,
+      "y": 23.021484375
     }
   },
   {
@@ -1087,8 +1087,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2525,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 20.8193359375,
+      "y": 23.021484375
     }
   },
   {
@@ -1099,8 +1099,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2526,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 24.623046875,
+      "y": 28.0263671875
     }
   },
   {
@@ -1111,8 +1111,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2526,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 24.623046875,
+      "y": 28.0263671875
     }
   },
   {
@@ -1123,8 +1123,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2526,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 24.623046875,
+      "y": 28.0263671875
     }
   },
   {
@@ -1135,8 +1135,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2526,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 24.623046875,
+      "y": 28.0263671875
     }
   },
   {
@@ -1147,8 +1147,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2526,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 24.623046875,
+      "y": 28.0263671875
     }
   },
   {
@@ -1159,8 +1159,8 @@ export const spearFishingLog = [
     "placeId": 2408,
     "zoneId": 2526,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 24.623046875,
+      "y": 28.0263671875
     }
   },
   {
@@ -1171,8 +1171,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3341,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 14.1328125,
+      "y": 31.1494140625
     }
   },
   {
@@ -1183,8 +1183,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3341,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 14.1328125,
+      "y": 31.1494140625
     }
   },
   {
@@ -1195,8 +1195,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3341,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 14.1328125,
+      "y": 31.1494140625
     }
   },
   {
@@ -1207,8 +1207,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3341,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 14.1328125,
+      "y": 31.1494140625
     }
   },
   {
@@ -1219,8 +1219,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3341,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 14.1328125,
+      "y": 31.1494140625
     }
   },
   {
@@ -1231,8 +1231,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3341,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 14.1328125,
+      "y": 31.1494140625
     }
   },
   {
@@ -1243,8 +1243,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3342,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 7.486328125,
+      "y": 32.2705078125
     }
   },
   {
@@ -1255,8 +1255,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3342,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 7.486328125,
+      "y": 32.2705078125
     }
   },
   {
@@ -1267,8 +1267,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3342,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 7.486328125,
+      "y": 32.2705078125
     }
   },
   {
@@ -1279,8 +1279,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3342,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 7.486328125,
+      "y": 32.2705078125
     }
   },
   {
@@ -1291,8 +1291,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3342,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 7.486328125,
+      "y": 32.2705078125
     }
   },
   {
@@ -1303,8 +1303,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3342,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 7.486328125,
+      "y": 32.2705078125
     }
   },
   {
@@ -1315,8 +1315,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3343,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 13.9326171875,
+      "y": 37.515625
     }
   },
   {
@@ -1327,8 +1327,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3343,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 13.9326171875,
+      "y": 37.515625
     }
   },
   {
@@ -1339,8 +1339,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3343,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 13.9326171875,
+      "y": 37.515625
     }
   },
   {
@@ -1351,8 +1351,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3343,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 13.9326171875,
+      "y": 37.515625
     }
   },
   {
@@ -1363,8 +1363,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3343,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 13.9326171875,
+      "y": 37.515625
     }
   },
   {
@@ -1375,8 +1375,8 @@ export const spearFishingLog = [
     "placeId": 2953,
     "zoneId": 3343,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 13.9326171875,
+      "y": 37.515625
     }
   },
   {
@@ -1387,8 +1387,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3344,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 20.37890625,
+      "y": 13.412109375
     }
   },
   {
@@ -1399,8 +1399,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3344,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 20.37890625,
+      "y": 13.412109375
     }
   },
   {
@@ -1411,8 +1411,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3344,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 20.37890625,
+      "y": 13.412109375
     }
   },
   {
@@ -1423,8 +1423,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3344,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 20.37890625,
+      "y": 13.412109375
     }
   },
   {
@@ -1435,8 +1435,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3344,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 20.37890625,
+      "y": 13.412109375
     }
   },
   {
@@ -1447,8 +1447,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3344,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 20.37890625,
+      "y": 13.412109375
     }
   },
   {
@@ -1459,8 +1459,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3345,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 19.6982421875,
+      "y": 21.9404296875
     }
   },
   {
@@ -1471,8 +1471,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3345,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 19.6982421875,
+      "y": 21.9404296875
     }
   },
   {
@@ -1483,8 +1483,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3345,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 19.6982421875,
+      "y": 21.9404296875
     }
   },
   {
@@ -1495,8 +1495,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3345,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 19.6982421875,
+      "y": 21.9404296875
     }
   },
   {
@@ -1507,8 +1507,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3345,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 19.6982421875,
+      "y": 21.9404296875
     }
   },
   {
@@ -1519,8 +1519,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3345,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 19.6982421875,
+      "y": 21.9404296875
     }
   },
   {
@@ -1531,8 +1531,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3346,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 25.50390625,
+      "y": 25.50390625
     }
   },
   {
@@ -1543,8 +1543,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3346,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 25.50390625,
+      "y": 25.50390625
     }
   },
   {
@@ -1555,8 +1555,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3346,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 25.50390625,
+      "y": 25.50390625
     }
   },
   {
@@ -1567,8 +1567,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3346,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 25.50390625,
+      "y": 25.50390625
     }
   },
   {
@@ -1579,8 +1579,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3346,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 25.50390625,
+      "y": 25.50390625
     }
   },
   {
@@ -1591,8 +1591,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3346,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 25.50390625,
+      "y": 25.50390625
     }
   },
   {
@@ -1603,8 +1603,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3347,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 30.1484375,
+      "y": 29.107421875
     }
   },
   {
@@ -1615,8 +1615,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3347,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 30.1484375,
+      "y": 29.107421875
     }
   },
   {
@@ -1627,8 +1627,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3347,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 30.1484375,
+      "y": 29.107421875
     }
   },
   {
@@ -1639,8 +1639,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3347,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 30.1484375,
+      "y": 29.107421875
     }
   },
   {
@@ -1651,8 +1651,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3347,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 30.1484375,
+      "y": 29.107421875
     }
   },
   {
@@ -1663,8 +1663,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3347,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 30.1484375,
+      "y": 29.107421875
     }
   },
   {
@@ -1675,8 +1675,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3348,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 29.267578125,
+      "y": 36.71484375
     }
   },
   {
@@ -1687,8 +1687,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3348,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 29.267578125,
+      "y": 36.71484375
     }
   },
   {
@@ -1699,8 +1699,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3348,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 29.267578125,
+      "y": 36.71484375
     }
   },
   {
@@ -1711,8 +1711,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3348,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 29.267578125,
+      "y": 36.71484375
     }
   },
   {
@@ -1723,8 +1723,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3348,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 29.267578125,
+      "y": 36.71484375
     }
   },
   {
@@ -1735,8 +1735,8 @@ export const spearFishingLog = [
     "placeId": 2956,
     "zoneId": 3348,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 29.267578125,
+      "y": 36.71484375
     }
   },
   {
@@ -1747,8 +1747,8 @@ export const spearFishingLog = [
     "placeId": 2957,
     "zoneId": 3349,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 5.32421875,
+      "y": 25.7041015625
     }
   },
   {
@@ -1759,8 +1759,8 @@ export const spearFishingLog = [
     "placeId": 2957,
     "zoneId": 3349,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 5.32421875,
+      "y": 25.7041015625
     }
   },
   {
@@ -1771,8 +1771,8 @@ export const spearFishingLog = [
     "placeId": 2957,
     "zoneId": 3349,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 5.32421875,
+      "y": 25.7041015625
     }
   },
   {
@@ -1783,8 +1783,8 @@ export const spearFishingLog = [
     "placeId": 2957,
     "zoneId": 3349,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 5.32421875,
+      "y": 25.7041015625
     }
   },
   {
@@ -1795,8 +1795,8 @@ export const spearFishingLog = [
     "placeId": 2957,
     "zoneId": 3349,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 5.32421875,
+      "y": 25.7041015625
     }
   },
   {
@@ -1807,8 +1807,8 @@ export const spearFishingLog = [
     "placeId": 2957,
     "zoneId": 3349,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 5.32421875,
+      "y": 25.7041015625
     }
   },
   {
@@ -1819,8 +1819,8 @@ export const spearFishingLog = [
     "placeId": 2957,
     "zoneId": 3350,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 9.48828125,
+      "y": 29.908203125
     }
   },
   {
@@ -1831,8 +1831,8 @@ export const spearFishingLog = [
     "placeId": 2957,
     "zoneId": 3350,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 9.48828125,
+      "y": 29.908203125
     }
   },
   {
@@ -1843,8 +1843,8 @@ export const spearFishingLog = [
     "placeId": 2957,
     "zoneId": 3350,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 9.48828125,
+      "y": 29.908203125
     }
   },
   {
@@ -1855,8 +1855,8 @@ export const spearFishingLog = [
     "placeId": 2957,
     "zoneId": 3350,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 9.48828125,
+      "y": 29.908203125
     }
   },
   {
@@ -1867,8 +1867,8 @@ export const spearFishingLog = [
     "placeId": 2957,
     "zoneId": 3350,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 9.48828125,
+      "y": 29.908203125
     }
   },
   {
@@ -1879,8 +1879,8 @@ export const spearFishingLog = [
     "placeId": 2957,
     "zoneId": 3350,
     "coords": {
-      "x": null,
-      "y": null
+      "x": 9.48828125,
+      "y": 29.908203125
     }
   }
 ];

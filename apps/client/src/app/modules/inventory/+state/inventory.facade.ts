@@ -4,10 +4,11 @@ import { select, Store } from '@ngrx/store';
 
 import { InventoryPartialState } from './inventory.reducer';
 import { inventoryQuery } from './inventory.selectors';
-import { LoadInventory, UpdateInventory } from './inventory.actions';
+import { LoadInventory, ResetInventory, UpdateInventory } from './inventory.actions';
 import { ContainerType } from '../../../model/user/inventory/container-type';
 import { UserInventory } from '../../../model/user/inventory/user-inventory';
-import { filter, map } from 'rxjs/operators';
+import { filter, map, shareReplay } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -15,10 +16,11 @@ import { filter, map } from 'rxjs/operators';
 export class InventoryFacade {
   loaded$ = this.store.pipe(select(inventoryQuery.getLoaded));
 
-  inventory$ = this.store.pipe(
+  inventory$: Observable<UserInventory> = this.store.pipe(
     select(inventoryQuery.getInventory),
     filter(inventory => inventory !== null),
-    map(inventory => inventory.clone())
+    map((inventory: UserInventory) => inventory.clone()),
+    shareReplay(1)
   );
 
   constructor(private store: Store<InventoryPartialState>) {
@@ -39,6 +41,8 @@ export class InventoryFacade {
       case ContainerType.RetainerBag5:
       case ContainerType.RetainerBag6:
         return 'RetainerBag';
+      case ContainerType.RetainerMarket:
+        return 'RetainerMarket';
       case ContainerType.SaddleBag0:
       case ContainerType.SaddleBag1:
       case ContainerType.PremiumSaddleBag0:
@@ -72,5 +76,9 @@ export class InventoryFacade {
 
   updateInventory(inventory: UserInventory, force = false): void {
     this.store.dispatch(new UpdateInventory(inventory, force));
+  }
+
+  resetInventory(): void {
+    this.store.dispatch(new ResetInventory());
   }
 }

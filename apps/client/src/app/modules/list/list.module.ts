@@ -27,7 +27,6 @@ import { PipesModule } from '../../pipes/pipes.module';
 import { NameQuestionPopupModule } from '../name-question-popup/name-question-popup.module';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { ListCompactsService } from './list-compacts.service';
 import { ClipboardModule } from 'ngx-clipboard';
 import { AlarmsExtractor } from './data/extractor/alarms-extractor';
 import { BellNodesService } from '../../core/data/bell-nodes.service';
@@ -48,6 +47,12 @@ import { ProgressPopupModule } from '../progress-popup/progress-popup.module';
 import { LazyDataService } from '../../core/data/lazy-data.service';
 import { TreasuresExtractor } from './data/extractor/treasures-extractor';
 import { FatesExtractor } from './data/extractor/fates-extractor';
+import { ListDetailsPanelComponent } from './list-details-panel/list-details-panel.component';
+import { ItemRowComponent } from './item-row/item-row.component';
+import { MarketboardModule } from '../marketboard/marketboard.module';
+import { AlarmsModule } from '../../core/alarms/alarms.module';
+import { MapModule } from '../map/map.module';
+import { ItemDetailsPopupsModule } from '../item-details/item-details-popups.module';
 
 
 export const DATA_EXTRACTORS: Provider[] = [
@@ -65,9 +70,9 @@ export const DATA_EXTRACTORS: Provider[] = [
   { provide: EXTRACTORS, useClass: InstancesExtractor, deps: [GarlandToolsService], multi: true },
   { provide: EXTRACTORS, useClass: GardeningExtractor, deps: [GarlandToolsService], multi: true },
   { provide: EXTRACTORS, useClass: VoyagesExtractor, deps: [GarlandToolsService], multi: true },
-  { provide: EXTRACTORS, useClass: DropsExtractor, deps: [GarlandToolsService], multi: true },
+  { provide: EXTRACTORS, useClass: DropsExtractor, deps: [GarlandToolsService, LazyDataService], multi: true },
   { provide: EXTRACTORS, useClass: VenturesExtractor, deps: [GarlandToolsService], multi: true },
-  { provide: EXTRACTORS, useClass: AlarmsExtractor, deps: [GarlandToolsService, BellNodesService], multi: true },
+  { provide: EXTRACTORS, useClass: AlarmsExtractor, deps: [GarlandToolsService, BellNodesService, LazyDataService], multi: true },
   { provide: EXTRACTORS, useClass: MasterbooksExtractor, deps: [GarlandToolsService], multi: true },
   { provide: EXTRACTORS, useClass: TreasuresExtractor, deps: [GarlandToolsService], multi: true },
   { provide: EXTRACTORS, useClass: FatesExtractor, deps: [GarlandToolsService, LazyDataService], multi: true }
@@ -97,18 +102,22 @@ export const DATA_EXTRACTORS: Provider[] = [
     ClipboardModule,
     NgZorroAntdModule,
     FlexLayoutModule,
+    MarketboardModule,
+    AlarmsModule,
+    MapModule,
+    ItemDetailsPopupsModule,
 
     StoreModule.forFeature('lists', listsReducer, { initialState: listsInitialState }),
     EffectsModule.forFeature([ListsEffects])
   ],
   providers: [
     ...DATA_EXTRACTORS,
-    DataExtractorService,
-    ListCompactsService
+    DataExtractorService
   ],
-  declarations: [ListPanelComponent, TagsPopupComponent, ListCompletionPopupComponent],
+  declarations: [ListPanelComponent, ListDetailsPanelComponent,
+    ItemRowComponent, TagsPopupComponent, ListCompletionPopupComponent],
   entryComponents: [TagsPopupComponent, ListCompletionPopupComponent],
-  exports: [ListPanelComponent]
+  exports: [ListPanelComponent, ListDetailsPanelComponent]
 })
 export class ListModule {
 

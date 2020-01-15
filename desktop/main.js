@@ -5,8 +5,7 @@ const Config = require('electron-config');
 const config = new Config();
 const isDev = require('electron-is-dev');
 const log = require('electron-log');
-log.transports.file.level = 'info';
-const express = require('express');
+log.transports.file.level = 'debug';
 const fs = require('fs');
 const Machina = require('./machina.js');
 
@@ -25,21 +24,21 @@ let nativeIcon;
 let updateInterval;
 
 let openedOverlays = {};
+let openedOverlayUris = [];
 
 const options = {
-  multi: false,
   noHA: false
 };
 
 for (let i = 0; i < argv.length; i++) {
-  if (argv[i] === '--multi' || argv[i] === '-m') {
-    options.multi = true;
-  }
   if (argv[i] === '--noHardwareAcceleration' || argv[i] === '-noHA') {
     options.noHA = true;
   }
   if (argv[i] === '--verbose' || argv[i] === '-v') {
     options.verbose = true;
+  }
+  if (argv[i] === '--winpcap' || argv[i] === '-wp') {
+    options.winpcap = true;
   }
 }
 
@@ -47,23 +46,10 @@ if (isDev) {
   // autoUpdater.updateConfigPath = path.join(__dirname, 'dev-app-update.yml');
 }
 
-if (!options.multi) {
-
-  app.requestSingleInstanceLock();
-  app.on('second-instance', (event, commandLine, cwd) => {
-    // Someone tried to run a second instance, we should focus our window.
-    if (win && !options.multi) {
-      const cmdLine = commandLine[1];
-      if (cmdLine) {
-        let path = commandLine[1].substr(12);
-        log.info(`Opening from second-instance : `, path);
-        win && win.webContents.send('navigate', path);
-        win.focus();
-      }
-      if (win.isMinimized()) win.restore();
-      win.focus();
-    }
-  });
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.isQuitting = true;
+  app.quit();
 }
 
 let deepLink = '';
@@ -97,11 +83,15 @@ function createWindow() {
       deepLink = deepLink.substr(0, deepLink.length - 1);
     }
   });
-  if (process.platform === 'win32') {
+  if (process.platform === 'win32' && process.argv.slice(1).toString().indexOf('--') === -1 && process.argv.slice(1).toString().indexOf('.js') === -1) {
     log.info(`Opening from argv : `, process.argv.slice(1));
     deepLink = process.argv.slice(1).toString().substr(12);
   } else {
     deepLink = config.get('router:uri') || '';
+  }
+  // It seems like somehow, this could happen.
+  if (deepLink.indexOf('overlay') > -1) {
+    deepLink = '';
   }
   let opts = {
     show: false,
@@ -119,12 +109,9 @@ function createWindow() {
     opts.alwaysOnTop = true;
   }
   win = new BrowserWindow(opts);
-  if (config.get('win:fullscreen')) {
-    win.maximize();
-  }
 
   if (config.get('machina') === true) {
-    Machina.start(win, config, options.verbose);
+    Machina.start(win, config, options.verbose, options.winpcap);
   }
 
   win.loadURL(`file://${BASE_APP_PATH}/index.html#${deepLink}`);
@@ -156,34 +143,27 @@ function createWindow() {
   });
 
   win.once('ready-to-show', () => {
-    if (api === undefined) {
-      // Start the api server for app detection
-      api = express();
-
-      api.use(function(req, res, next) {
-        res.header('Access-Control-Allow-Origin', '*');
-        res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-        next();
-      });
-
-      api.get('/', (req, res) => {
-        res.send('OK');
-      });
-
-      api.listen(7331);
+    if (!config.get('start-minimized')) {
+      win.focus();
+      win.show();
+      if (config.get('win:fullscreen')) {
+        win.maximize();
+      }
     }
-
-    win.focus();
-    win.show();
     autoUpdater.checkForUpdates();
   });
 
   // save window size and position
-  win.on('close', () => {
-
+  win.on('close', (event) => {
+    if (!app.isQuitting && !config.get('always-quit')) {
+      event.preventDefault();
+      win.hide();
+      return false;
+    }
     if (config.get('machina') === true) {
       Machina.stop();
     }
+    config.set('overlays', openedOverlayUris);
     config.set('win:bounds', win.getBounds());
     config.set('win:fullscreen', win.isMaximized());
     config.set('win:alwaysOnTop', win.isAlwaysOnTop());
@@ -202,12 +182,7 @@ function createWindow() {
 
   win.webContents.on('will-navigate', handleRedirect);
   win.webContents.on('new-window', handleRedirect);
-  win.on('show', () => {
-    tray.setHighlightMode('always');
-  });
-  win.on('hide', () => {
-    tray.setHighlightMode('never');
-  });
+  (config.get('overlays') || []).forEach(overlayUri => openOverlay({ url: overlayUri }));
 }
 
 function openOverlay(overlayConfig) {
@@ -242,11 +217,13 @@ function openOverlay(overlayConfig) {
     config.set(`overlay:${url}:opacity`, overlay.getOpacity());
     config.set(`overlay:${url}:on-top`, overlay.isAlwaysOnTop());
     delete openedOverlays[url];
+    openedOverlayUris = openedOverlayUris.filter(uri => uri !== url);
   });
 
 
   overlay.loadURL(`file://${BASE_APP_PATH}/index.html#${url}?overlay=true`);
   openedOverlays[url] = overlay;
+  openedOverlayUris.push(url);
 }
 
 function createTray() {
@@ -267,10 +244,25 @@ function createTray() {
   tray.setToolTip('FFXIV Teamcraft');
   const contextMenu = Menu.buildFromTemplate([
     {
+      label: 'Fishing Overlay',
+      type: 'normal',
+      click: () => {
+        openOverlay({ url: '/fishing-reporter-overlay' });
+      }
+    },
+    {
       label: 'Alarm Overlay',
       type: 'normal',
       click: () => {
         openOverlay({ url: '/alarms-overlay' });
+      }
+    },
+    {
+      label: 'Quit',
+      type: 'normal',
+      click: () => {
+        app.isQuitting = true;
+        app.quit();
       }
     }
   ]);
@@ -284,6 +276,15 @@ function forEachOverlay(cb) {
     });
 }
 
+function broadcast(eventName, data) {
+  if (win) {
+    win.webContents.send(eventName, data);
+  }
+  forEachOverlay(overlay => {
+    overlay.webContents.send(eventName, data);
+  });
+}
+
 ipcMain.on('app-ready', (event) => {
   if (options.nativeDecorator) {
     event.sender.send('window-decorator', false);
@@ -294,7 +295,7 @@ ipcMain.on('toggle-machina', (event, enabled) => {
   config.set('machina', enabled);
   event.sender.send('toggle-machina:value', enabled);
   if (enabled) {
-    Machina.start(win, config, options.winpcap);
+    Machina.start(win, config, options.verbose, options.winpcap);
   } else {
     Machina.stop();
   }
@@ -303,6 +304,30 @@ ipcMain.on('toggle-machina', (event, enabled) => {
 ipcMain.on('toggle-machina:get', (event) => {
   event.sender.send('toggle-machina:value', config.get('machina'));
 });
+
+let fishingState = {};
+
+ipcMain.on('fishing-state:set', (_, data) => {
+  fishingState = data;
+  broadcast('fishing-state', data);
+});
+
+ipcMain.on('fishing-state:get', (event) => {
+  event.sender.send('fishing-state', fishingState);
+});
+
+
+let appState = {};
+
+ipcMain.on('app-state:set', (_, data) => {
+  appState = data;
+  broadcast('app-state', data);
+});
+
+ipcMain.on('app-state:get', (event) => {
+  event.sender.send('app-state', appState);
+});
+
 
 // Create window on electron intialization
 app.on('ready', () => {
@@ -367,6 +392,7 @@ ipcMain.on('apply-settings', (event, settings) => {
       overlay.setIgnoreMouseEvents(settings.clickthrough === 'true');
       overlay.webContents.send('update-settings', settings);
     });
+    win.webContents.send('update-settings', settings);
   } catch (e) {
     // Window already destroyed, so we don't care :)
   }
@@ -409,19 +435,28 @@ ipcMain.on('run-update', () => {
 });
 
 ipcMain.on('always-on-top', (event, onTop) => {
+  config.set('win:alwaysOnTop', onTop);
   win.setAlwaysOnTop(onTop, 'floating');
 });
 
 ipcMain.on('always-on-top:get', (event) => {
-  event.sender.send('always-on-top:value', win.alwaysOnTop);
+  event.sender.send('always-on-top:value', config.get('win:alwaysOnTop'));
 });
 
-ipcMain.on('always-on-top', (event, onTop) => {
-  win.setAlwaysOnTop(onTop, 'floating');
+ipcMain.on('always-quit', (event, flag) => {
+  config.set('always-quit', flag);
 });
 
-ipcMain.on('always-on-top:get', (event) => {
-  event.sender.send('always-on-top:value', win.alwaysOnTop);
+ipcMain.on('always-quit:get', (event) => {
+  event.sender.send('always-quit:value', config.get('always-quit'));
+});
+
+ipcMain.on('start-minimized', (event, flag) => {
+  config.set('start-minimized', flag);
+});
+
+ipcMain.on('start-minimized:get', (event) => {
+  event.sender.send('start-minimized:value', config.get('start-minimized'));
 });
 
 ipcMain.on('overlay', (event, data) => {

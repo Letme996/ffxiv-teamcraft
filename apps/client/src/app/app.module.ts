@@ -82,7 +82,6 @@ import { LoadingScreenModule } from './pages/loading-screen/loading-screen.modul
 import { WorkshopModule } from './modules/workshop/workshop.module';
 import { LayoutModule } from '@angular/cdk/layout';
 import { CustomItemsModule } from './modules/custom-items/custom-items.module';
-import { TransferHttpCacheModule } from '@nguniversal/common';
 import en from '@angular/common/locales/en';
 import fr from '@angular/common/locales/fr';
 import de from '@angular/common/locales/de';
@@ -96,6 +95,10 @@ import ko from '@angular/common/locales/ko';
 import { ClipboardModule } from 'ngx-clipboard';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { EorzeaModule } from './modules/eorzea/eorzea.module';
+import { AngularFireFunctionsModule } from '@angular/fire/functions';
+import { GraphQLModule } from './graphql.module';
+import { ApolloInterceptor } from './apollo-interceptor';
+import { QuickSearchModule } from './modules/quick-search/quick-search.module';
 
 const icons: IconDefinition[] = [
   SettingOutline,
@@ -164,7 +167,8 @@ const nzConfig: NzConfig = {
     },
     { provide: FirestoreSettingsToken, useValue: {} },
     { provide: NZ_ICONS, useValue: icons },
-    { provide: HTTP_INTERCEPTORS, useClass: UniversalInterceptor, multi: true }
+    { provide: HTTP_INTERCEPTORS, useClass: UniversalInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: ApolloInterceptor, multi: true }
   ],
   imports: [
     FlexLayoutModule,
@@ -186,6 +190,7 @@ const nzConfig: NzConfig = {
     AngularFireDatabaseModule,
     AngularFireAuthModule,
     AngularFirestoreModule,
+    AngularFireFunctionsModule,
 
     XivapiClientModule.forRoot(),
 
@@ -212,6 +217,8 @@ const nzConfig: NzConfig = {
     AlarmsModule,
     AlarmsSidebarModule,
 
+    QuickSearchModule,
+
     InventoryModule,
     EorzeaModule,
 
@@ -219,8 +226,7 @@ const nzConfig: NzConfig = {
 
     BrowserAnimationsModule,
 
-    BrowserModule.withServerTransition({ appId: 'serverApp' }),
-    TransferHttpCacheModule,
+    BrowserModule,
     FormsModule,
     ReactiveFormsModule,
 
@@ -241,7 +247,8 @@ const nzConfig: NzConfig = {
     EffectsModule.forRoot([]),
     StoreModule.forFeature('auth', authReducer, { initialState: authInitialState }),
     EffectsModule.forFeature([AuthEffects]),
-    ClipboardModule
+    ClipboardModule,
+    GraphQLModule
   ],
   bootstrap: [AppComponent]
 })

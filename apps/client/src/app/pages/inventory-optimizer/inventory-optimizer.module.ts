@@ -10,12 +10,16 @@ import { PipesModule } from '../../pipes/pipes.module';
 import { CanBeBought } from './optimizations/can-be-bought';
 import { RouterModule, Routes } from '@angular/router';
 import { MaintenanceGuard } from '../maintenance/maintenance.guard';
+import { VersionLockGuard } from '../version-lock/version-lock.guard';
 import { PageLoaderModule } from '../../modules/page-loader/page-loader.module';
 import { FullpageMessageModule } from '../../modules/fullpage-message/fullpage-message.module';
 import { ItemIconModule } from '../../modules/item-icon/item-icon.module';
 import { InventoryFacade } from '../../modules/inventory/+state/inventory.facade';
 import { Duplicates } from './optimizations/duplicates';
 import { FormsModule } from '@angular/forms';
+import { ClipboardModule } from 'ngx-clipboard';
+import { HasTooFew } from './optimizations/has-too-few';
+import { LazyDataService } from '../../core/data/lazy-data.service';
 
 const optimisations: Provider[] = [
   {
@@ -27,7 +31,13 @@ const optimisations: Provider[] = [
     provide: INVENTORY_OPTIMIZER,
     useClass: Duplicates,
     multi: true,
-    deps: [TranslateService, InventoryFacade]
+    deps: [TranslateService, InventoryFacade, LazyDataService]
+  },
+  {
+    provide: INVENTORY_OPTIMIZER,
+    useClass: HasTooFew,
+    multi: true,
+    deps: [LazyDataService]
   }
 ];
 
@@ -35,7 +45,7 @@ const routes: Routes = [
   {
     path: '',
     component: InventoryOptimizerComponent,
-    canActivate: [MaintenanceGuard]
+    canActivate: [MaintenanceGuard, VersionLockGuard]
   }
 ];
 
@@ -54,7 +64,8 @@ const routes: Routes = [
     RouterModule.forChild(routes),
     PageLoaderModule,
     FullpageMessageModule,
-    ItemIconModule
+    ItemIconModule,
+    ClipboardModule
   ],
   providers: [
     ...optimisations

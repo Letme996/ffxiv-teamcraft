@@ -14,23 +14,30 @@ function sendToRenderer(win, packet) {
   win && win.webContents && win.webContents.send('packet', packet);
 }
 
-module.exports.start = function(win, config, verbose) {
+module.exports.start = function(win, config, verbose, winpcap) {
   isElevated().then(elevated => {
     log.info('elevated', elevated);
     if (elevated) {
-      if (!config.get('firewall')) {
-        exec(`netsh advfirewall firewall add rule name="FFXIVTeamcraft" dir=in action=allow program="${machinaExePath}" enable=yes`);
-        config.set('firewall', true);
-      }
+      let line = 0;
+
+      exec('netsh advfirewall firewall show rule name="FFXIVTeamcraft"', (err, stdout) => {
+        if ((stdout.match(/FFXIVTeamcraft/g) || []).length > 1) {
+          exec('netsh advfirewall firewall delete rule name="FFXIVTeamcraft"');
+          exec(`netsh advfirewall firewall add rule name="FFXIVTeamcraft" dir=in action=allow program="${machinaExePath}" enable=yes`);
+        }
+        if (stdout.indexOf('FFXIVTeamcraft') === -1) {
+          exec(`netsh advfirewall firewall add rule name="FFXIVTeamcraft" dir=in action=allow program="${machinaExePath}" enable=yes`);
+        }
+      });
 
       const options = isDev ?
         {
-          monitorType: 'RawSocket',
-          parseAlgorithm: 'CPUHeavy'
+          monitorType: winpcap ? 'WinPCap' : 'RawSocket',
+          parseAlgorithm: 'PacketSpecific'
         } : {
-          parseAlgorithm: 'CPUHeavy',
+          parseAlgorithm: 'PacketSpecific',
           noData: true,
-          monitorType: 'RawSocket',
+          monitorType: winpcap ? 'WinPCap' : 'RawSocket',
           machinaExePath: machinaExePath,
           remoteDataPath: path.join(app.getAppPath(), '../../resources/remote-data'),
           definitionsDir: path.join(app.getAppPath(), '../../resources/app.asar.unpacked/node_modules/node-machina-ffxiv/models/default')
@@ -40,37 +47,50 @@ module.exports.start = function(win, config, verbose) {
         options.logger = log.log;
       }
 
+      const acceptedPackets = [
+        'itemInfo',
+        'updateInventorySlot',
+        'currencyCrystalInfo',
+        'marketBoardItemListingCount',
+        'marketBoardItemListing',
+        'marketBoardItemListingHistory',
+        'marketBoardSearchResult',
+        'marketTaxRates',
+        'playerSetup',
+        'playerSpawn',
+        'inventoryModifyHandler',
+        'npcSpawn',
+        'playerStats',
+        'updateClassInfo',
+        'actorControl',
+        'initZone',
+        'effectResult',
+        'eventPlay',
+        'eventStart',
+        'eventFinish',
+        'eventPlay4',
+        'eventPlay8',
+        'updatePositionHandler',
+        'actorControlSelf',
+        'useMooch'
+      ];
+
       Machina = new MachinaFFXIV(options);
+      Machina.filter(acceptedPackets);
       Machina.start(() => {
         log.info('Packet capture started');
       });
+      Machina.setMaxListeners(0);
       Machina.on('any', (packet) => {
         if (verbose) {
           log.log(JSON.stringify(packet));
         }
-        const acceptedPackets = [
-          'itemInfo',
-          'updateInventorySlot',
-          'currencyCrystalInfo',
-          'marketBoardItemListing',
-          'marketBoardItemListingHistory',
-          'playerSetup',
-          'playerSpawn',
-          'inventoryModifyHandler',
-          'npcSpawn',
-          'ping',
-          'playerStats',
-          'updateClassInfo',
-          'actorControl',
-          'initZone',
-          'weatherChange'
-        ];
         if (acceptedPackets.indexOf(packet.type) > -1 || acceptedPackets.indexOf(packet.superType) > -1) {
           sendToRenderer(win, packet);
         }
       });
     } else {
-      throw new Error('Not enough permissions to run packet capture');
+      log.error('Not enough permissions to run packet capture');
     }
   });
 
