@@ -15,6 +15,10 @@
   }
 }
 
+.form-row {
+  height: 100px;
+}
+
 .search-tip {
   font-style: italic;
   font-size: 11px;
@@ -36,11 +40,6 @@
   min-width: 100px;
 }
 
-.quest-icon {
-  width: 48px;
-  height: 48px;
-}
-
 nz-form-item {
   display: flex;
   align-items: center;
@@ -48,6 +47,10 @@ nz-form-item {
 
 .filter-select {
   width: 200px !important;
+}
+
+.filter-select-compact {
+  width: 150px !important;
 }
 
 .input-box {
@@ -68,22 +71,17 @@ nz-form-item {
 }
 
 .job-icon {
-  width: 32px;
-  height: 32px;
+  font-size: 28px;
+}
 
-  &.small {
-    width: 28px;
-    height: 28px;
-  }
+.icon {
+  width: 24px;
+  height: 24px;
 }
 
 .stat-filter-row {
 
-  .level-range {
-    top: -2px;
-  }
-
-  ::ng-deep .ant-select-selection {
+  ::ng-deep .ant-select-selector {
     border-bottom-right-radius: 0;
     border-top-right-radius: 0;
   }
@@ -106,6 +104,7 @@ nz-form-item {
     width: 20%;
     text-align: center;
     pointer-events: none;
+    height: 32px;
   }
 }
 
@@ -129,34 +128,43 @@ nz-form-item {
   @media @mobile {
     padding: 20px 10px;
   }
+}
 
-  .amount-input {
-    width: 230px;
+.selection {
+  padding: 0 50px;
+  @media @mobile {
+    padding: 0 10px;
   }
 
-  .item-name {
-    font-size: 1.2em;
-  }
-
-  .description {
-    opacity: .8;
-  }
-
-  .result-row {
-    border-bottom: 1px solid #444;
+  .selection-row {
+    position: relative;
+    border: 1px solid #444;
+    border-radius: 4px;
     padding: 5px;
+    margin: 5px;
 
-    &.odd {
-      background-color: rgba(77, 77, 77, .5);
+    .delete-icon {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+    }
+  }
+
+  .selection-buttons {
+    width: 100%;
+
+    > button:first-child {
+      margin-right: 10px;
     }
   }
 }
+
 
 .instance-banner {
   width: 220px;
 }
 
-::ng-deep {
+:host ::ng-deep {
   .ant-list-item {
     @media @mobile {
       justify-content: center;

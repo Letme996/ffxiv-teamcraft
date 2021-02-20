@@ -4,7 +4,6 @@ import { SearchComponent } from './search/search.component';
 import { RouterModule, Routes } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { CoreModule } from '../../core/core.module';
-import { NgZorroAntdModule } from 'ng-zorro-antd';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { FullpageMessageModule } from '../../modules/fullpage-message/fullpage-message.module';
 import { PageLoaderModule } from '../../modules/page-loader/page-loader.module';
@@ -20,7 +19,10 @@ import { SearchIntroComponent } from './search-intro/search-intro.component';
 import { ItemIconModule } from '../../modules/item-icon/item-icon.module';
 import { MaintenanceGuard } from '../maintenance/maintenance.guard';
 import { VersionLockGuard } from '../version-lock/version-lock.guard';
-import { ClipboardModule } from 'ngx-clipboard';
+
+import { SearchResultComponent } from './search-result/search-result.component';
+import { AntdSharedModule } from '../../core/antd-shared.module';
+import { CompanyWorkshopTreeModule } from '../../modules/company-workshop-tree/company-workshop-tree.module';
 
 const routes: Routes = [
   {
@@ -36,7 +38,7 @@ const routes: Routes = [
     FormsModule,
     ReactiveFormsModule,
     FlexLayoutModule,
-    ClipboardModule,
+
 
     CoreModule,
     ListModule,
@@ -51,11 +53,12 @@ const routes: Routes = [
     RotationsModule,
     ItemIconModule,
 
-    NgZorroAntdModule,
+    AntdSharedModule,
 
-    RouterModule.forChild(routes)
+    RouterModule.forChild(routes),
+    CompanyWorkshopTreeModule
   ],
-  declarations: [SearchComponent, SearchIntroComponent]
+  declarations: [SearchComponent, SearchIntroComponent, SearchResultComponent]
 })
 export class SearchModule {
 }

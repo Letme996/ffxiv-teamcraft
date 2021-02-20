@@ -58,8 +58,8 @@ export class LayoutOrderService {
       }
     },
     'SLOT': (a, b) => {
-      const aSlot = this.lazyData.data.itemSlots[a.id];
-      const bSlot = this.lazyData.data.itemSlots[b.id];
+      const aSlot = this.lazyData.data.itemEquipSlotCategory[a.id] || 0;
+      const bSlot = this.lazyData.data.itemEquipSlotCategory[b.id] || 0;
       if (aSlot === bSlot) {
         return this.orderFunctions['JOB'](a, b);
       } else {
@@ -87,32 +87,23 @@ export class LayoutOrderService {
       return -1;
     }
     const craft = craftedBy[0];
-    const logEntry = this.lazyData.data.craftingLog[craft.jobId - 8];
+    const logEntry = this.lazyData.data.craftingLog[craft.job - 8];
     // Log entry is undefined if it's an airship
     if (logEntry === undefined) {
       return -1;
     }
     // We multiply index by craft.jobId because we want it to keep the job order too
-    return logEntry.indexOf(+row.recipeId) * craft.jobId;
+    return logEntry.indexOf(+row.recipeId) * craft.job;
   }
 
   private getJobId(row: ListRow): number {
     const craftedBy = getItemSource(row, DataType.CRAFTED_BY);
     const gatheredBy = getItemSource(row, DataType.GATHERED_BY);
     if (craftedBy.length > 0) {
-      // Returns the lowest level available for the craft.
-      const jobName = LayoutOrderService.JOBS.find(job => craftedBy[0].icon.indexOf(job) > -1);
-      if (jobName !== undefined) {
-        return LayoutOrderService.JOBS.indexOf(jobName);
-      }
-      return 0;
+      return craftedBy[0].job;
     }
     if (gatheredBy.type !== undefined) {
-      const jobName = ['miner', 'miner', 'botanist', 'botanist', 'fisher'][gatheredBy.type];
-      if (jobName !== undefined) {
-        return LayoutOrderService.JOBS.indexOf(jobName);
-      }
-      return 0;
+      return gatheredBy.type;
     }
     return 0;
   }
@@ -122,7 +113,7 @@ export class LayoutOrderService {
     const gatheredBy = getItemSource(row, DataType.GATHERED_BY);
     if (craftedBy.length > 0) {
       // Returns the lowest level available for the craft.
-      return craftedBy.map(craft => craft.level).sort((a, b) => a - b)[0];
+      return craftedBy.map(craft => craft.lvl).sort((a, b) => a - b)[0];
     }
     if (gatheredBy.type !== undefined) {
       return gatheredBy.level;

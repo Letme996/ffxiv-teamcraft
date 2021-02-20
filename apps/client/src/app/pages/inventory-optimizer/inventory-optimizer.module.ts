@@ -2,7 +2,6 @@ import { NgModule, Provider } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { InventoryOptimizerComponent } from './inventory-optimizer/inventory-optimizer.component';
 import { INVENTORY_OPTIMIZER } from './optimizations/inventory-optimizer';
-import { NgZorroAntdModule } from 'ng-zorro-antd';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FlexLayoutModule } from '@angular/flex-layout';
 import { CoreModule } from '../../core/core.module';
@@ -17,9 +16,19 @@ import { ItemIconModule } from '../../modules/item-icon/item-icon.module';
 import { InventoryFacade } from '../../modules/inventory/+state/inventory.facade';
 import { Duplicates } from './optimizations/duplicates';
 import { FormsModule } from '@angular/forms';
-import { ClipboardModule } from 'ngx-clipboard';
+
 import { HasTooFew } from './optimizations/has-too-few';
 import { LazyDataService } from '../../core/data/lazy-data.service';
+import { ConsolidateStacks } from './optimizations/consolidate-stacks';
+import { UnwantedMaterials } from './optimizations/unwanted-materials';
+import { ScrollingModule } from '@angular/cdk/scrolling';
+import { LazyScrollModule } from '../../modules/lazy-scroll/lazy-scroll.module';
+import { CanBeGatheredEasily } from './optimizations/can-be-gathered-easily';
+import { CanExtractMateria } from './optimizations/can-extract-materia';
+import { AntdSharedModule } from '../../core/antd-shared.module';
+import { InventoryModule } from '../../modules/inventory/inventory.module';
+import { UselessHq } from './optimizations/useless-hq';
+import { AuthFacade } from '../../+state/auth.facade';
 
 const optimisations: Provider[] = [
   {
@@ -38,6 +47,35 @@ const optimisations: Provider[] = [
     useClass: HasTooFew,
     multi: true,
     deps: [LazyDataService]
+  },
+  {
+    provide: INVENTORY_OPTIMIZER,
+    useClass: ConsolidateStacks,
+    multi: true,
+    deps: [TranslateService, InventoryFacade, LazyDataService]
+  },
+  {
+    provide: INVENTORY_OPTIMIZER,
+    useClass: UnwantedMaterials,
+    multi: true,
+    deps: [LazyDataService]
+  },
+  {
+    provide: INVENTORY_OPTIMIZER,
+    useClass: CanExtractMateria,
+    multi: true,
+    deps: [LazyDataService]
+  },
+  {
+    provide: INVENTORY_OPTIMIZER,
+    useClass: CanBeGatheredEasily,
+    multi: true
+  },
+  {
+    provide: INVENTORY_OPTIMIZER,
+    useClass: UselessHq,
+    multi: true,
+    deps: [AuthFacade, LazyDataService]
   }
 ];
 
@@ -58,14 +96,17 @@ const routes: Routes = [
     FormsModule,
     CoreModule,
     PipesModule,
-    NgZorroAntdModule,
+    AntdSharedModule,
     TranslateModule,
     FlexLayoutModule,
     RouterModule.forChild(routes),
     PageLoaderModule,
     FullpageMessageModule,
     ItemIconModule,
-    ClipboardModule
+
+    ScrollingModule,
+    LazyScrollModule,
+    InventoryModule
   ],
   providers: [
     ...optimisations

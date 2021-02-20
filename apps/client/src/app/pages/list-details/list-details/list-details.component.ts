@@ -2,12 +2,13 @@ import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/
 import { LayoutsFacade } from '../../../core/layout/+state/layouts.facade';
 import { ListsFacade } from '../../../modules/list/+state/lists.facade';
 import { ActivatedRoute, Router } from '@angular/router';
-import { filter, first, map, mergeMap, shareReplay, switchMap, takeUntil, tap } from 'rxjs/operators';
+import { filter, first, map, shareReplay, switchMap, takeUntil, tap } from 'rxjs/operators';
 import { BehaviorSubject, combineLatest, Observable, Subject } from 'rxjs';
 import { LayoutRowDisplay } from '../../../core/layout/layout-row-display';
 import { List } from '../../../modules/list/model/list';
 import { getItemSource, ListRow } from '../../../modules/list/model/list-row';
-import { NzMessageService, NzModalService } from 'ng-zorro-antd';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { NameQuestionPopupComponent } from '../../../modules/name-question-popup/name-question-popup/name-question-popup.component';
 import { TranslateService } from '@ngx-translate/core';
 import { AlarmsFacade } from '../../../core/alarms/+state/alarms.facade';
@@ -38,7 +39,12 @@ import * as _ from 'lodash';
 import { IpcService } from '../../../core/electron/ipc.service';
 import { InventoryFacade } from '../../../modules/inventory/+state/inventory.facade';
 import { SettingsService } from '../../../modules/settings/settings.service';
+import { InventorySynthesisPopupComponent } from '../inventory-synthesis-popup/inventory-synthesis-popup.component';
+import { PlatformService } from '../../../core/tools/platform.service';
 import { DataType } from '../../../modules/list/data/data-type';
+import { ListSplitPopupComponent } from '../../../modules/list/list-split-popup/list-split-popup.component';
+import { CommissionsFacade } from '../../../modules/commission-board/+state/commissions.facade';
+import { InventoryCleanupPopupComponent } from '../inventory-cleanup-popup/inventory-cleanup-popup.component';
 
 @Component({
   selector: 'app-list-details',
@@ -105,7 +111,7 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
               private discordWebhookService: DiscordWebhookService, private i18nTools: I18nToolsService,
               private l12n: LocalizedDataService, private linkTools: LinkToolsService, protected seoService: SeoService,
               private media: MediaObserver, public ipc: IpcService, private inventoryFacade: InventoryFacade,
-              public settings: SettingsService) {
+              public settings: SettingsService, public platform: PlatformService, private commissionsFacade: CommissionsFacade) {
     super(seoService);
     this.ipc.once('toggle-machina:value', (event, value) => {
       this.machinaToggle = value;
@@ -135,15 +141,15 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
     );
     this.layouts$ = this.layoutsFacade.allLayouts$;
     this.selectedLayout$ = this.layoutsFacade.selectedLayout$;
-    this.finalItemsRow$ = combineLatest([this.list$, this.adaptativeFilter$]).pipe(
-      mergeMap(([list, adaptativeFilter]) => this.layoutsFacade.getFinalItemsDisplay(list, adaptativeFilter))
+    this.finalItemsRow$ = combineLatest([this.list$, this.adaptativeFilter$, this.hideCompletedGlobal$]).pipe(
+      switchMap(([list, adaptativeFilter, overrideHideCompleted]) => this.layoutsFacade.getFinalItemsDisplay(list, adaptativeFilter, overrideHideCompleted))
     );
     this.display$ = combineLatest([this.list$, this.adaptativeFilter$, this.hideCompletedGlobal$]).pipe(
-      mergeMap(([list, adaptativeFilter, overrideHideCompleted]) => this.layoutsFacade.getDisplay(list, adaptativeFilter, overrideHideCompleted)),
+      switchMap(([list, adaptativeFilter, overrideHideCompleted]) => this.layoutsFacade.getDisplay(list, adaptativeFilter, overrideHideCompleted)),
       shareReplay(1)
     );
     this.crystals$ = this.list$.pipe(
-      map(list => list.crystals)
+      map(list => list.crystals.sort((a, b) => a.id - b.id))
     );
 
     this.teams$ = this.teamsFacade.myTeams$;
@@ -170,6 +176,7 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
     super.ngOnInit();
     this.layoutsFacade.loadAll();
     this.teamsFacade.loadMyTeams();
+    this.layoutsFacade.loadAll();
     this.activatedRoute.paramMap
       .pipe(
         map(params => params.get('listId')),
@@ -199,13 +206,9 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
     this.listsFacade.updateList(list);
   }
 
-  getLink(list: List): string {
+  getLink = (list: List) => {
     return this.linkTools.getLink(`/list/${list.$key}`);
-  }
-
-  afterLinkCopy(): void {
-    this.message.success(this.translate.instant('Share_link_copied'));
-  }
+  };
 
   assignTeam(list: List, team: Team): void {
     list.teamId = team.$key;
@@ -225,7 +228,7 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
     if (team.webhook !== undefined) {
       this.discordWebhookService.notifyListRemovedFromTeam(team, list);
     }
-    this.listsFacade.updateList(list, true, true);
+    this.listsFacade.updateList(list);
   }
 
   renameList(list: List): void {
@@ -241,6 +244,16 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
         return list;
       })
     ).subscribe(l => this.listsFacade.updateList(l));
+  }
+
+  unArchiveList(list: List): void {
+    list.archived = false;
+    this.listsFacade.pureUpdateList(list.$key, { archived: false });
+  }
+
+  archiveList(list: List): void {
+    list.archived = true;
+    this.listsFacade.pureUpdateList(list.$key, { archived: true });
   }
 
   editNote(list: List): void {
@@ -267,7 +280,7 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
           if (row.id < 20) {
             return;
           }
-          listAlarms.push(...(row.alarms || []).filter(alarm => {
+          listAlarms.push(...(getItemSource(row, DataType.ALARMS)).filter(alarm => {
             // Avoid duplicates.
             return listAlarms.find(a => a.itemId === alarm.itemId && a.zoneId === alarm.zoneId) === undefined;
           }));
@@ -282,17 +295,26 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
   }
 
   cloneList(list: List): void {
+    this.listsFacade.loadMyLists();
     const clone = list.clone();
     this.listsFacade.updateList(list);
-    this.listsFacade.addList(clone);
+    this.listManager.upgradeList(clone).pipe(
+      first()
+    ).subscribe(updatedClone => {
+      this.listsFacade.addList(updatedClone);
+    });
     this.progressService.showProgress(this.listsFacade.myLists$.pipe(
       map(lists => lists.find(l => l.createdAt.toMillis() === clone.createdAt.toMillis() && l.$key !== undefined)),
       filter(l => l !== undefined),
       first()
-    ), 1, 'List_fork_in_progress').pipe(first()).subscribe(l => {
-      this.router.navigate(['list', l.$key]);
-      this.message.success(this.translate.instant('List_forked'));
-    });
+    ), 1, 'List_fork_in_progress')
+      .pipe(
+        first()
+      )
+      .subscribe(l => {
+        this.router.navigate(['list', l.$key]);
+        this.message.success(this.translate.instant('List_forked'));
+      });
   }
 
   appendExportStringWithRow(exportString: string, row: ListRow): string {
@@ -300,7 +322,7 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
     return (remaining > 0) ? (exportString + `${remaining}x ${this.i18nTools.getName(this.l12n.getItem(row.id))}\n`) : exportString;
   }
 
-  public getListTextExport(display: ListDisplay, list: List): string {
+  public getListTextExport = (display: ListDisplay, list: List) => {
     const seed = list.items.filter(row => row.id < 20).reduce((exportString, row) => {
       return this.appendExportStringWithRow(exportString, row);
     }, `${this.translate.instant('Crystals')} :\n`) + '\n';
@@ -310,11 +332,7 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
       }, `${displayRow.title} :\n`) + '\n';
     }, seed);
 
-  }
-
-  afterListTextCopied(): void {
-    this.message.success(this.translate.instant('LIST.Copied_as_text'));
-  }
+  };
 
   regenerateList(list: List): void {
     this.regeneratingList = true;
@@ -343,6 +361,15 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
       nzTitle: this.translate.instant('LIST_DETAILS.Tags_popup'),
       nzFooter: null,
       nzContent: TagsPopupComponent,
+      nzComponentParams: { list: list }
+    });
+  }
+
+  openSplitPopup(list: List): void {
+    this.dialog.create({
+      nzTitle: this.translate.instant('LIST_DETAILS.Split_list'),
+      nzFooter: null,
+      nzContent: ListSplitPopupComponent,
       nzComponentParams: { list: list }
     });
   }
@@ -386,6 +413,24 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
     });
   }
 
+  openInventorySynthesisPopup(list: List): void {
+    this.dialog.create({
+      nzTitle: this.translate.instant('LIST_DETAILS.Inventory_synthesis'),
+      nzFooter: null,
+      nzContent: InventorySynthesisPopupComponent,
+      nzComponentParams: { list: list }
+    });
+  }
+
+  openInventoryCleanupPopup(list: List): void {
+    this.dialog.create({
+      nzTitle: this.translate.instant('LIST_DETAILS.Inventory_cleanup'),
+      nzFooter: null,
+      nzContent: InventoryCleanupPopupComponent,
+      nzComponentParams: { list: list }
+    });
+  }
+
   openHistoryPopup(): void {
     this.dialog.create({
       nzTitle: this.translate.instant('LIST.History'),
@@ -399,14 +444,31 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
       first(),
       map(inventory => {
         list.items.forEach(item => {
-          const inventoryItems = inventory.getItem(item.id, true);
+          let inventoryItems = inventory.getItem(item.id, true);
+          const requiredHq = list.requiredAsHQ(item) > 0;
+          if (requiredHq && this.settings.enableAutofillHQFilter) {
+            inventoryItems = inventoryItems.filter(i => i.hq);
+          }
+          if (!requiredHq && this.settings.enableAutofillNQFilter) {
+            inventoryItems = inventoryItems.filter(i => !i.hq);
+          }
           if (inventoryItems.length > 0) {
-            const totalAmount = inventoryItems.reduce((total, i) => total + i.quantity, 0);
-            list.setDone(item.id, Math.min(item.done + totalAmount, item.amount), true);
+            let totalAmount = inventoryItems.reduce((total, i) => total + i.quantity, 0);
+            if (item.done + totalAmount > item.amount) {
+              totalAmount = item.amount - item.done;
+            }
+            list.setDone(item.id, totalAmount, true);
           }
         });
         list.finalItems.forEach(item => {
-          const inventoryItems = inventory.getItem(item.id, true);
+          let inventoryItems = inventory.getItem(item.id, true);
+          const requiredHq = list.requiredAsHQ(item) > 0;
+          if (requiredHq && this.settings.enableAutofillHQFilter) {
+            inventoryItems = inventoryItems.filter(i => i.hq);
+          }
+          if (!requiredHq && this.settings.enableAutofillNQFilter) {
+            inventoryItems = inventoryItems.filter(i => !i.hq);
+          }
           if (inventoryItems.length > 0) {
             const totalAmount = inventoryItems.reduce((total, i) => total + i.quantity, 0);
             list.setDone(item.id, Math.min(item.done + totalAmount, item.amount), false, true);
@@ -443,6 +505,10 @@ export class ListDetailsComponent extends TeamcraftPageComponent implements OnIn
     ).subscribe(res => {
       this.listsFacade.updateList(res);
     });
+  }
+
+  createCommission(list: List): void {
+    this.commissionsFacade.create(list);
   }
 
   trackByDisplayRow(index: number, row: LayoutRowDisplay): string {

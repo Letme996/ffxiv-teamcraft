@@ -15,7 +15,9 @@ import { AppRoutingModule } from './app-routing.module';
 import { StoreModule } from '@ngrx/store';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 import { EffectsModule } from '@ngrx/effects';
-import { en_US, NgZorroAntdModule, NZ_CONFIG, NZ_I18N, NZ_ICONS, NzConfig } from 'ng-zorro-antd';
+import { en_US, NZ_I18N } from 'ng-zorro-antd/i18n';
+import { NZ_CONFIG, NzConfig } from 'ng-zorro-antd/core/config';
+import { NZ_ICONS } from 'ng-zorro-antd/icon';
 import { registerLocaleData } from '@angular/common';
 import { CoreModule } from './core/core.module';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
@@ -29,7 +31,7 @@ import { ListModule } from './modules/list/list.module';
 import { AngularFireModule } from '@angular/fire';
 import { AngularFireDatabaseModule } from '@angular/fire/database';
 import { AngularFireAuthModule } from '@angular/fire/auth';
-import { AngularFirestoreModule, FirestoreSettingsToken } from '@angular/fire/firestore';
+import { AngularFirestoreModule } from '@angular/fire/firestore';
 import { XivapiClientModule } from '@xivapi/angular-client';
 import { NgxDnDModule } from '@swimlane/ngx-dnd';
 import { TranslationsLoaderFactory } from './translations-loader';
@@ -92,13 +94,26 @@ import es from '@angular/common/locales/es';
 import pt from '@angular/common/locales/pt';
 import hr from '@angular/common/locales/hr';
 import ko from '@angular/common/locales/ko';
-import { ClipboardModule } from 'ngx-clipboard';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { EorzeaModule } from './modules/eorzea/eorzea.module';
 import { AngularFireFunctionsModule } from '@angular/fire/functions';
 import { GraphQLModule } from './graphql.module';
 import { ApolloInterceptor } from './apollo-interceptor';
 import { QuickSearchModule } from './modules/quick-search/quick-search.module';
+import { GearsetsModule } from './modules/gearsets/gearsets.module';
+import { ChangelogPopupModule } from './modules/changelog-popup/changelog-popup.module';
+import { PlayerMetricsModule } from './modules/player-metrics/player-metrics.module';
+import { NzSpaceModule } from 'ng-zorro-antd/space';
+import { CraftingReplayModule } from './modules/crafting-replay/crafting-replay.module';
+import { AntdSharedModule } from './core/antd-shared.module';
+import { NzMenuModule } from 'ng-zorro-antd/menu';
+import { NzLayoutModule } from 'ng-zorro-antd/layout';
+import { NzAvatarModule } from 'ng-zorro-antd/avatar';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzAlertModule } from 'ng-zorro-antd/alert';
+import { AngularFireMessagingModule } from '@angular/fire/messaging';
+import { NavigationSidebarModule } from './modules/navigation-sidebar/navigation-sidebar.module';
+import { APP_INITIALIZERS } from './app-initializers';
 
 const icons: IconDefinition[] = [
   SettingOutline,
@@ -165,10 +180,10 @@ const nzConfig: NzConfig = {
       provide: NZ_CONFIG,
       useValue: nzConfig
     },
-    { provide: FirestoreSettingsToken, useValue: {} },
     { provide: NZ_ICONS, useValue: icons },
     { provide: HTTP_INTERCEPTORS, useClass: UniversalInterceptor, multi: true },
-    { provide: HTTP_INTERCEPTORS, useClass: ApolloInterceptor, multi: true }
+    { provide: HTTP_INTERCEPTORS, useClass: ApolloInterceptor, multi: true },
+    ...APP_INITIALIZERS
   ],
   imports: [
     FlexLayoutModule,
@@ -189,8 +204,11 @@ const nzConfig: NzConfig = {
 
     AngularFireDatabaseModule,
     AngularFireAuthModule,
-    AngularFirestoreModule,
+    AngularFirestoreModule.enablePersistence({
+      synchronizeTabs: true
+    }),
     AngularFireFunctionsModule,
+    AngularFireMessagingModule,
 
     XivapiClientModule.forRoot(),
 
@@ -213,6 +231,10 @@ const nzConfig: NzConfig = {
     CustomItemsModule,
     PageLoaderModule,
     LoadingScreenModule,
+    GearsetsModule,
+    CraftingReplayModule,
+
+    ChangelogPopupModule,
 
     AlarmsModule,
     AlarmsSidebarModule,
@@ -236,19 +258,35 @@ const nzConfig: NzConfig = {
     CoreModule.forRoot(),
     PipesModule,
 
-    NgZorroAntdModule,
+    AntdSharedModule,
+    NzMenuModule,
     NgDragDropModule.forRoot(),
     NgxDnDModule,
 
-    StoreModule.forRoot({}, {}),
+    StoreModule.forRoot({}, {
+      runtimeChecks: {
+        strictStateSerializability: false,
+        strictActionSerializability: false,
+        strictStateImmutability: false,
+        strictActionImmutability: false,
+        strictActionWithinNgZone: false
+      }
+    }),
     !environment.production ? StoreDevtoolsModule.instrument({
       name: 'FFXIV Teamcraft'
     }) : [],
     EffectsModule.forRoot([]),
     StoreModule.forFeature('auth', authReducer, { initialState: authInitialState }),
     EffectsModule.forFeature([AuthEffects]),
-    ClipboardModule,
-    GraphQLModule
+    GraphQLModule,
+
+    PlayerMetricsModule,
+    NzSpaceModule,
+    NzLayoutModule,
+    NzAvatarModule,
+    NzSpinModule,
+    NzAlertModule,
+    NavigationSidebarModule
   ],
   bootstrap: [AppComponent]
 })

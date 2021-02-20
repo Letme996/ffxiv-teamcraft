@@ -5,6 +5,7 @@ import { ListRow } from '../../../modules/list/model/list-row';
 import { TranslateService } from '@ngx-translate/core';
 import { InventoryFacade } from '../../../modules/inventory/+state/inventory.facade';
 import { LazyDataService } from '../../../core/data/lazy-data.service';
+import { ContainerType } from '../../../model/user/inventory/container-type';
 
 export class Duplicates extends InventoryOptimizer {
 
@@ -15,19 +16,23 @@ export class Duplicates extends InventoryOptimizer {
   protected _getOptimization(item: InventoryItem, inventory: UserInventory, data: ListRow): { [p: string]: number | string } | null {
     const dupes = inventory.toArray()
       .filter(i => {
-        return InventoryOptimizer.IGNORED_CONTAINERS.indexOf(i.containerId) === -1;
+        let matches = i.contentId === inventory.contentId;
+        if (!inventory.trackItemsOnSale) {
+          matches = i.containerId !== ContainerType.RetainerMarket;
+        }
+        return matches && InventoryOptimizer.IGNORED_CONTAINERS.indexOf(i.containerId) === -1;
       })
       .filter(i => {
         return i.itemId === item.itemId
           && i.hq === item.hq
           && i.spiritBond === 0
-          && i.slot !== item.slot
+          && !InventoryOptimizer.inSameSlot(i, item)
           && item.quantity + i.quantity < this.lazyData.data.stackSizes[i.itemId];
       });
     if (dupes.length > 0) {
       return {
         containers: dupes.map(dupe => {
-          return dupe.retainerName || this.translate.instant(`INVENTORY.BAG.${this.inventoryFacade.getContainerName(dupe.containerId)}`);
+          return this.inventoryFacade.getContainerDisplayName(dupe);
         }).join(', ')
       };
     }

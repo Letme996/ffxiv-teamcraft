@@ -4,7 +4,6 @@ import { ListDetailsComponent } from './list-details/list-details.component';
 import { ListModule } from '../../modules/list/list.module';
 import { TranslateModule } from '@ngx-translate/core';
 import { CoreModule } from '../../core/core.module';
-import { NgZorroAntdModule } from 'ng-zorro-antd';
 import { RouterModule, Routes } from '@angular/router';
 import { LayoutModule } from '../../core/layout/layout.module';
 import { ItemIconModule } from '../../modules/item-icon/item-icon.module';
@@ -12,7 +11,6 @@ import { PipesModule } from '../../pipes/pipes.module';
 import { ListCrystalsPanelComponent } from './list-crystals-panel/list-crystals-panel.component';
 import { FormsModule } from '@angular/forms';
 import { AlarmsModule } from '../../core/alarms/alarms.module';
-import { ClipboardModule } from 'ngx-clipboard';
 import { FlexLayoutModule } from '@angular/flex-layout';
 import { FullpageMessageModule } from '../../modules/fullpage-message/fullpage-message.module';
 import { IconsModule } from '../../core/icons/icons.module';
@@ -37,6 +35,12 @@ import { ItemPickerModule } from '../../modules/item-picker/item-picker.module';
 import { ListPickerModule } from '../../modules/list-picker/list-picker.module';
 import { TooltipModule } from '../../modules/tooltip/tooltip.module';
 import { ListContributionsComponent } from './list-contributions/list-contributions.component';
+import { InventorySynthesisPopupComponent } from './inventory-synthesis-popup/inventory-synthesis-popup.component';
+import { AntdSharedModule } from '../../core/antd-shared.module';
+import { CommissionsModule } from '../commissions/commissions.module';
+import { CommissionBoardModule } from '../../modules/commission-board/commission-board.module';
+import { InventoryCleanupPopupComponent } from './inventory-cleanup-popup/inventory-cleanup-popup.component';
+import { InventoryModule } from '../../modules/inventory/inventory.module';
 
 const routes: Routes = [
   {
@@ -61,7 +65,7 @@ const routes: Routes = [
     ItemIconModule,
     PipesModule,
     AlarmsModule,
-    ClipboardModule,
+
     PageLoaderModule,
     FullpageMessageModule,
     LayoutEditorModule,
@@ -82,7 +86,10 @@ const routes: Routes = [
     FlexLayoutModule,
 
     TranslateModule,
-    NgZorroAntdModule
+    AntdSharedModule,
+
+    CommissionBoardModule,
+    InventoryModule
   ],
   declarations: [
     ListDetailsComponent,
@@ -90,13 +97,9 @@ const routes: Routes = [
     ListHistoryPopupComponent,
     InventoryViewComponent,
     TotalPanelPricePopupComponent,
-    ListContributionsComponent
-  ],
-  entryComponents: [
-    ListHistoryPopupComponent,
-    InventoryViewComponent,
-    TotalPanelPricePopupComponent,
-    ListContributionsComponent
+    ListContributionsComponent,
+    InventorySynthesisPopupComponent,
+    InventoryCleanupPopupComponent
   ]
 })
 export class ListDetailsModule {

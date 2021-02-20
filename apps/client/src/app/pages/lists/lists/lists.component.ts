@@ -5,7 +5,8 @@ import { BehaviorSubject, combineLatest, Observable, of } from 'rxjs';
 import { debounceTime, filter, first, map, mergeMap, shareReplay, startWith, switchMap, tap } from 'rxjs/operators';
 import { ProgressPopupService } from '../../../modules/progress-popup/progress-popup.service';
 import { ListManagerService } from '../../../modules/list/list-manager.service';
-import { NzMessageService, NzModalService } from 'ng-zorro-antd';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { TranslateService } from '@ngx-translate/core';
 import { NameQuestionPopupComponent } from '../../../modules/name-question-popup/name-question-popup/name-question-popup.component';
 import { Workshop } from '../../../model/other/workshop';
@@ -16,7 +17,7 @@ import { Team } from '../../../model/team/team';
 import { MergeListsPopupComponent } from '../merge-lists-popup/merge-lists-popup.component';
 import { ListImportPopupComponent } from '../list-import-popup/list-import-popup.component';
 import { AuthFacade } from '../../../+state/auth.facade';
-import { requestsWithDelay } from '../../../core/rxjs/requests-with-delay';
+import { DeleteMultipleListsPopupComponent } from '../delete-multiple-lists-popup/delete-multiple-lists-popup.component';
 
 @Component({
   selector: 'app-lists',
@@ -43,15 +44,21 @@ export class ListsComponent {
 
   public loading$: Observable<boolean>;
 
-  private regenerating = false;
-
   public needsVerification$ = this.listsFacade.needsVerification$;
+
+  private loadingLists = [];
 
   constructor(private listsFacade: ListsFacade, private progress: ProgressPopupService,
               private listManager: ListManagerService, private message: NzMessageService,
               private translate: TranslateService, private dialog: NzModalService,
               private workshopsFacade: WorkshopsFacade, private teamsFacade: TeamsFacade,
               private authFacade: AuthFacade) {
+    this.listsFacade.loadMyLists();
+    this.listsFacade.loadListsWithWriteAccess();
+    this.workshopsFacade.loadMyWorkshops();
+    this.workshopsFacade.loadWorkshopsWithWriteAccess();
+    this.teamsFacade.loadMyTeams();
+
     this.workshops$ = combineLatest([this.workshopsFacade.myWorkshops$, this.listsFacade.allListDetails$]).pipe(
       debounceTime(100),
       map(([workshops, lists]) => {
@@ -76,6 +83,7 @@ export class ListsComponent {
     );
 
     this.favoriteLists$ = this.authFacade.favorites$.pipe(
+      filter(favorites => favorites !== undefined),
       map(favorites => (favorites.lists || [])),
       tap(lists => lists.forEach(list => this.listsFacade.load(list))),
       mergeMap(lists => {
@@ -97,6 +105,9 @@ export class ListsComponent {
                   const list = lists.find(c => c.$key === key);
                   if (list !== undefined) {
                     list.workshopId = workshop.$key;
+                  } else if (!this.loadingLists.includes(key)) {
+                    this.loadingLists.push(key);
+                    this.listsFacade.load(key);
                   }
                   return list;
                 })
@@ -170,6 +181,18 @@ export class ListsComponent {
     this.listsFacade.createEmptyList();
   }
 
+  loadArchivedLists(): void {
+    this.listsFacade.loadArchivedLists();
+  }
+
+  deleteMultipleLists(): void {
+    this.dialog.create({
+      nzTitle: this.translate.instant('LISTS.Delete_multiple_lists'),
+      nzContent: DeleteMultipleListsPopupComponent,
+      nzFooter: null
+    });
+  }
+
   createWorkshop(): void {
     this.dialog.create({
       nzContent: NameQuestionPopupComponent,
@@ -188,42 +211,6 @@ export class ListsComponent {
     });
   }
 
-  regenerateLists(compacts: List[]): void {
-    this.regenerating = true;
-    compacts.forEach(compact => {
-      this.listsFacade.load(compact.$key);
-    });
-
-    const regenerations = compacts
-      .filter(compact => compact.isOutDated())
-      .map(compact => {
-        return this.listsFacade.allListDetails$.pipe(
-          map(details => details.find(l => l.$key === compact.$key)),
-          filter(list => list !== undefined),
-          first(),
-          switchMap(list => this.listManager.upgradeList(list)),
-          tap(l => this.listsFacade.updateList(l, false, true))
-        );
-      });
-
-    this.progress.showProgress(requestsWithDelay(regenerations, 250, true), regenerations.length)
-      .pipe(
-        first(),
-        switchMap(() => {
-          return this.progress.showProgress(this.listsFacade.myLists$.pipe(
-            filter(lists => {
-              return lists.some(l => l.isOutDated()) === false;
-            }),
-            first()
-          ), 1, 'Saving_in_database');
-        })
-      )
-      .subscribe(() => {
-        this.regenerating = false;
-        this.message.success(this.translate.instant('LISTS.Regenerated_all'));
-      });
-  }
-
   setListIndex(list: List, index: number, lists: List[]): void {
     if (list.workshopId !== undefined) {
       this.workshopsFacade.removeListFromWorkshop(list.$key, list.workshopId);
@@ -236,16 +223,12 @@ export class ListsComponent {
     // Insert it at new index
     lists.splice(index, 0, list);
     // Update indexes and persist
-    lists
-      .map((l, i) => {
-        if (l.index !== i) {
-          l.index = i;
-        }
-        return l;
-      })
-      .forEach(l => {
-        this.listsFacade.updateListIndex(l);
-      });
+    this.listsFacade.updateListIndexes(lists.map((l, i) => {
+      if (l.index !== i) {
+        l.index = i;
+      }
+      return l;
+    }));
   }
 
   setWorkshopIndex(workshop: Workshop, index: number, workshopDisplays: WorkshopDisplay[]): void {

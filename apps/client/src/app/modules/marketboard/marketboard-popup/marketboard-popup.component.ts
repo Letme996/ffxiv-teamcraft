@@ -3,7 +3,7 @@ import { AuthFacade } from '../../../+state/auth.facade';
 import { catchError, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import { BehaviorSubject, combineLatest, Observable, of } from 'rxjs';
 import { LazyDataService } from '../../../core/data/lazy-data.service';
-import { MarketboardItem } from '@xivapi/angular-client/src/model/schema/market/marketboard-item';
+import { MarketboardItem } from '../../../core/api/market/marketboard-item';
 import { SettingsService } from '../../settings/settings.service';
 import { HttpClient } from '@angular/common/http';
 import { UniversalisService } from '../../../core/api/universalis.service';
@@ -32,6 +32,8 @@ export class MarketboardPopupComponent implements OnInit {
 
   server$: Observable<string>;
 
+  lastUpdated$: Observable<number>;
+
   error = false;
 
   sort$: BehaviorSubject<{ key: string, value: 'ascend' | 'descend' }> = new BehaviorSubject<{ key: string, value: any }>({
@@ -40,7 +42,7 @@ export class MarketboardPopupComponent implements OnInit {
   });
 
   constructor(private authFacade: AuthFacade, private http: HttpClient, private lazyData: LazyDataService,
-              private settings: SettingsService, private universalis: UniversalisService, private translate: TranslateService) {
+              public settings: SettingsService, private universalis: UniversalisService, private translate: TranslateService) {
   }
 
   ngOnInit() {
@@ -73,7 +75,7 @@ export class MarketboardPopupComponent implements OnInit {
       })
     );
 
-    this.prices$ = combineLatest(data$
+    this.prices$ = combineLatest([data$
         .pipe(
           map(item => item.Prices),
           tap(() => this.loading = false),
@@ -84,7 +86,7 @@ export class MarketboardPopupComponent implements OnInit {
           }),
           shareReplay(1)
         ),
-      this.sort$
+      this.sort$]
     ).pipe(
       map(([prices, sort]) => {
         return [...prices.sort((a, b) => {
@@ -122,6 +124,10 @@ export class MarketboardPopupComponent implements OnInit {
           });
       }),
       shareReplay(1)
+    );
+
+    this.lastUpdated$ = data$.pipe(
+      map(res => res.Updated)
     );
   }
 

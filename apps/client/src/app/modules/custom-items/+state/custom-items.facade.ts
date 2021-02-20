@@ -34,7 +34,7 @@ export class CustomItemsFacade {
     map(folders => folders.sort((a, b) => a.index - b.index))
   );
 
-  customItemsDisplay$: Observable<CustomItemsDisplay> = combineLatest(this.allCustomItems$, this.allCustomItemFolders$).pipe(
+  customItemsDisplay$: Observable<CustomItemsDisplay> = combineLatest([this.allCustomItems$, this.allCustomItemFolders$]).pipe(
     map(([items, folders]) => {
       return {
         otherItems: items.filter(item => item !== undefined && !folders.some(folder => folder.items.some(key => key === item.$key))),
@@ -69,7 +69,7 @@ export class CustomItemsFacade {
     this.store.dispatch(new DeleteCustomItem(key));
   }
 
-  loadAll() {
+  loadAll(): void {
     this.store.dispatch(new LoadCustomItems());
   }
 

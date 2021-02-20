@@ -1,15 +1,19 @@
-import { from, Observable, of, Subject } from 'rxjs';
+import { from, Observable, of, Subject, throwError } from 'rxjs';
 import { DataModel } from '../data-model';
 import { DataStore } from '../data-store';
 import { NgSerializerService } from '@kaiu/ng-serializer';
 import { NgZone } from '@angular/core';
 import { PendingChangesService } from '../../pending-changes/pending-changes.service';
 import { catchError, filter, map, takeUntil, tap } from 'rxjs/operators';
-import { AngularFirestore } from '@angular/fire/firestore';
+import { Action, AngularFirestore, DocumentSnapshot } from '@angular/fire/firestore';
 import { Instantiable } from '@kaiu/serializer';
 import { environment } from '../../../../../environments/environment';
+import firebase from 'firebase/app';
+import FieldValue = firebase.firestore.FieldValue;
 
 export abstract class FirestoreStorage<T extends DataModel> extends DataStore<T> {
+
+  protected static OPERATIONS: Record<string, Record<'read' | 'write' | 'delete', number>> = {};
 
   protected cache: { [index: string]: Observable<T> } = {};
 
@@ -22,9 +26,37 @@ export abstract class FirestoreStorage<T extends DataModel> extends DataStore<T>
   protected constructor(protected firestore: AngularFirestore, protected serializer: NgSerializerService, protected zone: NgZone,
                         protected pendingChangesService: PendingChangesService) {
     super();
+    (window as any).getOperationsStats = () => {
+      const totals = {
+        read: 0,
+        write: 0,
+        delete: 0
+      };
+      Object.entries(FirestoreStorage.OPERATIONS).forEach(([uri, stats]) => {
+        console.group(uri);
+        Object.entries(stats).forEach(([op, count]) => {
+          console.log(`${op}: ${count}`);
+          totals[op] += count;
+        });
+        console.groupEnd();
+      });
+      console.group('TOTALS');
+      Object.entries(totals).forEach(([op, count]) => {
+        console.log(`${op}: ${count}`);
+      });
+      console.groupEnd();
+    };
   }
 
-  protected prepareData(data: Partial<T>): T {
+  protected recordOperation(operation: 'read' | 'write' | 'delete', debugData?: any): void {
+    if ((window as any).verboseOperations) {
+      console.log('OPERATION', operation, this.getBaseUri(), debugData);
+    }
+    FirestoreStorage.OPERATIONS[this.getBaseUri()] = FirestoreStorage.OPERATIONS[this.getBaseUri()] || { read: 0, write: 0, delete: 0 };
+    FirestoreStorage.OPERATIONS[this.getBaseUri()][operation]++;
+  }
+
+  protected prepareData(data: Partial<T>): any {
     const clone: Partial<T> = JSON.parse(JSON.stringify(data));
     delete clone.$key;
     Object.keys(clone).forEach(key => {
@@ -33,7 +65,11 @@ export abstract class FirestoreStorage<T extends DataModel> extends DataStore<T>
       }
     });
     clone.appVersion = environment.version;
-    return clone as T;
+    return clone;
+  }
+
+  protected beforeDeserialization(data: Partial<T>): T {
+    return data as T;
   }
 
   public stopListening(key: string, cacheEntry?: string): void {
@@ -46,6 +82,12 @@ export abstract class FirestoreStorage<T extends DataModel> extends DataStore<T>
 
   add(data: T, uriParams?: any): Observable<string> {
     return from(this.firestore.collection(this.getBaseUri(uriParams)).add(this.prepareData(data))).pipe(
+      catchError(error => {
+        console.error(`ADD ${this.getBaseUri(uriParams)}`);
+        console.error(error);
+        return throwError(error);
+      }),
+      tap(() => this.recordOperation('write', data.$key)),
       map(res => res.id)
     );
   }
@@ -54,8 +96,14 @@ export abstract class FirestoreStorage<T extends DataModel> extends DataStore<T>
     if (this.cache[uid] === undefined) {
       this.cache[uid] = this.firestore.collection(this.getBaseUri(uriParams)).doc(uid).snapshotChanges()
         .pipe(
-          map((snap: any) => {
-            const valueWithKey: T = <T>{ ...snap.payload.data(), $key: snap.payload.id };
+          catchError(error => {
+            console.error(`GET ${this.getBaseUri(uriParams)}/${uid}`);
+            console.error(error);
+            return throwError(error);
+          }),
+          tap(() => this.recordOperation('read', uid)),
+          map((snap: Action<DocumentSnapshot<T>>) => {
+            const valueWithKey: T = this.beforeDeserialization(<T>{ ...snap.payload.data(), $key: snap.payload.id });
             if (!snap.payload.exists) {
               throw new Error(`${this.getBaseUri(uriParams)}/${uid} Not found`);
             }
@@ -86,10 +134,16 @@ export abstract class FirestoreStorage<T extends DataModel> extends DataStore<T>
     );
   }
 
-  pureUpdate(uid: string, data: any, uriParams?: any): Observable<void> {
+  pureUpdate(uid: string, data: Partial<T | Record<string, FieldValue>>, uriParams?: any): Observable<void> {
     this.pendingChangesService.addPendingChange(`update ${this.getBaseUri(uriParams)}/${uid}`);
     return from(this.firestore.collection(this.getBaseUri(uriParams)).doc(uid).update(data)).pipe(
+      catchError(error => {
+        console.error(`UPDATE ${this.getBaseUri(uriParams)}/${uid}`);
+        console.error(error);
+        return throwError(error);
+      }),
       tap(() => {
+        this.recordOperation('write', uid);
         this.pendingChangesService.removePendingChange(`update ${this.getBaseUri(uriParams)}/${uid}`);
       })
     );
@@ -98,10 +152,16 @@ export abstract class FirestoreStorage<T extends DataModel> extends DataStore<T>
   update(uid: string, data: Partial<T>, uriParams?: any): Observable<void> {
     this.pendingChangesService.addPendingChange(`update ${this.getBaseUri(uriParams)}/${uid}`);
     if (uid === undefined || uid === null || uid === '') {
-      throw new Error('Empty uid');
+      throw new Error(`Empty uid ${this.getBaseUri(uriParams)}`);
     }
     return from(this.firestore.collection(this.getBaseUri(uriParams)).doc(uid).update(this.prepareData(data))).pipe(
+      catchError(error => {
+        console.error(`UPDATE ${this.getBaseUri(uriParams)}/${uid}`);
+        console.error(error);
+        return throwError(error);
+      }),
       tap(() => {
+        this.recordOperation('write', uid);
         this.pendingChangesService.removePendingChange(`update ${this.getBaseUri(uriParams)}/${uid}`);
       })
     );
@@ -110,10 +170,16 @@ export abstract class FirestoreStorage<T extends DataModel> extends DataStore<T>
   set(uid: string, data: T, uriParams?: any): Observable<void> {
     this.pendingChangesService.addPendingChange(`set ${this.getBaseUri(uriParams)}/${uid}`);
     if (uid === undefined || uid === null || uid === '') {
-      throw new Error('Empty uid');
+      throw new Error(`Empty uid ${this.getBaseUri(uriParams)}`);
     }
     return from(this.firestore.collection(this.getBaseUri(uriParams)).doc(uid).set(this.prepareData(data))).pipe(
+      catchError(error => {
+        console.error(`SET ${this.getBaseUri(uriParams)}/${uid}`);
+        console.error(error);
+        return throwError(error);
+      }),
       tap(() => {
+        this.recordOperation('write', uid);
         this.pendingChangesService.removePendingChange(`set ${this.getBaseUri(uriParams)}/${uid}`);
       })
     );
@@ -122,14 +188,17 @@ export abstract class FirestoreStorage<T extends DataModel> extends DataStore<T>
   remove(uid: string, uriParams?: any): Observable<void> {
     this.pendingChangesService.addPendingChange(`remove ${this.getBaseUri(uriParams)}/${uid}`);
     if (uid === undefined || uid === null || uid === '') {
-      throw new Error('Empty uid');
+      throw new Error(`Empty uid ${this.getBaseUri(uriParams)}`);
     }
     // Delete subcollections before data, else we can't rely on parent data for permissions
     return from(this.firestore.collection(this.getBaseUri(uriParams)).doc(uid).delete()).pipe(
-      catchError(() => {
+      catchError(error => {
+        console.error(`DELETE ${this.getBaseUri(uriParams)}/${uid}`);
+        console.error(error);
         return of(null);
       }),
       tap(() => {
+        this.recordOperation('delete', uid);
         // If there's cache information, delete it.
         delete this.cache[uid];
         delete this.syncCache[uid];
@@ -138,4 +207,31 @@ export abstract class FirestoreStorage<T extends DataModel> extends DataStore<T>
     );
   }
 
+  removeMany(keys: string[], uriParams?: any): Observable<void> {
+    const batch = this.firestore.firestore.batch();
+    keys.forEach(key => {
+      batch.delete(this.firestore.collection(this.getBaseUri(uriParams)).doc(key).ref);
+    });
+    return from(batch.commit());
+  }
+
+  setMany(entities: T[], uriParams?: any): Observable<void> {
+    const batch = this.firestore.firestore.batch();
+    entities
+      .filter(entity => !!entity)
+      .forEach(entity => {
+      batch.set(this.firestore.collection(this.getBaseUri(uriParams)).doc(entity.$key).ref, this.prepareData(entity));
+    });
+    return from(batch.commit());
+  }
+
+  updateIndexes(rows: T[]): Observable<void> {
+    this.recordOperation('write', rows.map(row => row.$key));
+    const batch = this.firestore.firestore.batch();
+    rows.forEach(row => {
+      const ref = this.firestore.firestore.collection(this.getBaseUri()).doc(row.$key);
+      return batch.update(ref, { index: row.index });
+    });
+    return from(batch.commit());
+  }
 }

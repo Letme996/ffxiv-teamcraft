@@ -1,8 +1,8 @@
-import { Component, OnInit } from '@angular/core';
-import { MuscleMemory, Reuse, Simulation } from '@ffxiv-teamcraft/simulator';
-import { CraftingRotation } from '../../../../model/other/crafting-rotation';
-import { RotationTag } from '../community-rotations-page/rotation-tag';
-import { CommunityRotationsPageComponent } from '../community-rotations-page/community-rotations-page.component';
+import {Component, OnInit} from '@angular/core';
+import {MuscleMemory, Simulation} from '@ffxiv-teamcraft/simulator';
+import {CraftingRotation} from '../../../../model/other/crafting-rotation';
+import {RotationTag} from '../community-rotations-page/rotation-tag';
+import {CommunityRotationsPageComponent} from '../community-rotations-page/community-rotations-page.component';
 
 @Component({
   selector: 'app-community-rotation-popup',
@@ -57,10 +57,10 @@ export class CommunityRotationPopupComponent implements OnInit {
       if (actions.some(action => action.is(MuscleMemory)) && this.rotation.tags.indexOf('MUSCLE_MEMORY') === -1) {
         this.rotation.tags.push('MUSCLE_MEMORY');
       }
-      if (actions.some(action => action.is(Reuse)) && this.rotation.tags.indexOf('REUSE') === -1) {
-        this.rotation.tags.push('REUSE');
-      }
     }
   }
 
+  public adjust(prop: string, amount: number, min: number): void {
+    this.rotation.community[prop] = Math.max(this.rotation.community[prop] + amount, min);
+  }
 }

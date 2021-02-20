@@ -1,48 +1,80 @@
-import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Routes } from '@angular/router';
-import { DbComponent } from './db/db.component';
-import { CoreModule } from '../../core/core.module';
+import { NgModule } from '@angular/core';
 import { FlexLayoutModule } from '@angular/flex-layout';
 import { FormsModule } from '@angular/forms';
+import { RouterModule, Routes } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-import { MapModule } from '../../modules/map/map.module';
-import { PipesModule } from '../../pipes/pipes.module';
-import { ItemIconModule } from '../../modules/item-icon/item-icon.module';
+import { NgxChartsModule } from '@swimlane/ngx-charts';
 import { AlarmsModule } from '../../core/alarms/alarms.module';
-import { PageLoaderModule } from '../../modules/page-loader/page-loader.module';
-import { FullpageMessageModule } from '../../modules/fullpage-message/fullpage-message.module';
+import { AntdSharedModule } from '../../core/antd-shared.module';
+import { CoreModule } from '../../core/core.module';
 import { FishingBaitModule } from '../../modules/fishing-bait/fishing-bait.module';
-import { TooltipModule } from '../../modules/tooltip/tooltip.module';
+import { FullpageMessageModule } from '../../modules/fullpage-message/fullpage-message.module';
+import { I18nDisplayModule } from '../../modules/i18n-display/i18n-display.module';
+import { ItemDetailsPopupsModule } from '../../modules/item-details/item-details-popups.module';
+import { ItemIconModule } from '../../modules/item-icon/item-icon.module';
 import { ListModule } from '../../modules/list/list.module';
+import { MapModule } from '../../modules/map/map.module';
+import { MarketboardModule } from '../../modules/marketboard/marketboard.module';
+import { PageLoaderModule } from '../../modules/page-loader/page-loader.module';
+import { QuickSearchModule } from '../../modules/quick-search/quick-search.module';
 import { RotationsModule } from '../../modules/rotations/rotations.module';
-import { NgZorroAntdModule } from 'ng-zorro-antd';
-import { ItemComponent } from './item/item.component';
+import { TooltipModule } from '../../modules/tooltip/tooltip.module';
+import { UserAvatarModule } from '../../modules/user-avatar/user-avatar.module';
+import { PipesModule } from '../../pipes/pipes.module';
 import { MaintenanceGuard } from '../maintenance/maintenance.guard';
 import { VersionLockGuard } from '../version-lock/version-lock.guard';
-import { InstanceComponent } from './instance/instance.component';
-import { QuestComponent } from './quest/quest.component';
-import { NpcComponent } from './npc/npc.component';
-import { LeveComponent } from './leve/leve.component';
-import { MobComponent } from './mob/mob.component';
-import { FateComponent } from './fate/fate.component';
-import { MapPageComponent } from './map-page/map-page.component';
-import { NodeComponent } from './node/node.component';
+import { AchievementComponent } from './achievement/achievement.component';
 import { ActionComponent } from './action/action.component';
+import { CommentLinksPipe } from './db-comments/comment-links.pipe';
+import { DbCommentsComponent } from './db-comments/db-comments/db-comments.component';
+import { DbComponent } from './db/db.component';
+import { FateComponent } from './fate/fate.component';
+import { FishBaitsComponent } from './fish/fish-baits/fish-baits.component';
+import { FishBiteTimesComponent } from './fish/fish-bite-times/fish-bite-times.component';
+import { FishDetailsContainerComponent } from './fish/fish-details-container/fish-details-container.component';
+import { FishHooksetsComponent } from './fish/fish-hooksets/fish-hooksets.component';
+import { FishHoursComponent } from './fish/fish-hours/fish-hours.component';
+import { FishMoochesComponent } from './fish/fish-mooches/fish-mooches.component';
+import { FishSpotsListComponent } from './fish/fish-spots-list/fish-spots-list.component';
+import { FishTopUsersComponent } from './fish/fish-top-users/fish-top-users.component';
+import { FishUserRankingComponent } from './fish/fish-user-ranking/fish-user-ranking.component';
+import { FishWeatherTransitionsComponent } from './fish/fish-weather-transitions/fish-weather-transitions.component';
+import { FishWeathersComponent } from './fish/fish-weathers/fish-weathers.component';
+import { FishComponent } from './fish/fish.component';
+import { FishingMissesPopupComponent } from './fishing-misses-popup/fishing-misses-popup.component';
+import { FishingSpotAvailableFishesComponent } from './fishing-spot/fishing-spot-available-fishes/fishing-spot-available-fishes.component';
+import { FishingSpotBaitDatagridComponent } from './fishing-spot/fishing-spot-bait-datagrid/fishing-spot-bait-datagrid.component';
+import { FishingSpotBiteTimesComponent } from './fishing-spot/fishing-spot-bite-times/fishing-spot-bite-times.component';
+import { FishingSpotDatagridComponent } from './fishing-spot/fishing-spot-datagrid/fishing-spot-datagrid.component';
+import { FishingSpotHoursComponent } from './fishing-spot/fishing-spot-hours/fishing-spot-hours.component';
+import { FishingSpotPositionComponent } from './fishing-spot/fishing-spot-position/fishing-spot-position.component';
+import { FishingSpotTugDatagridComponent } from './fishing-spot/fishing-spot-tug-datagrid/fishing-spot-tug-datagrid.component';
+import { FishingSpotWeatherDatagridComponent } from './fishing-spot/fishing-spot-weather-datagrid/fishing-spot-weather-datagrid.component';
+import { FishingSpotWeatherTransitionsComponent } from './fishing-spot/fishing-spot-weather-transitions/fishing-spot-weather-transitions.component';
+import { FishingSpotWeathersComponent } from './fishing-spot/fishing-spot-weathers/fishing-spot-weathers.component';
+import { FishingSpotComponent } from './fishing-spot/fishing-spot.component';
+import { InstanceComponent } from './instance/instance.component';
+import { ItemComponent } from './item/item.component';
+import { ModelViewerComponent } from './item/model-viewer/model-viewer.component';
+import { LeveComponent } from './leve/leve.component';
+import { MapPageComponent } from './map-page/map-page.component';
+import { MobComponent } from './mob/mob.component';
+import { NodeComponent } from './node/node.component';
+import { NpcComponent } from './npc/npc.component';
+import { PatchComponent } from './patch/patch.component';
+import { QuestComponent } from './quest/quest.component';
+import { FishContextService } from './service/fish-context.service';
+import * as FishGQLProviders from './service/fish-data.gql';
+import { FishDataService } from './service/fish-data.service';
+import { ItemContextService } from './service/item-context.service';
 import { StatusComponent } from './status/status.component';
 import { TraitComponent } from './trait/trait.component';
-import { ModelViewerComponent } from './item/model-viewer/model-viewer.component';
-import { MarketboardModule } from '../../modules/marketboard/marketboard.module';
-import { DbCommentsComponent } from './db-comments/db-comments/db-comments.component';
-import { UserAvatarModule } from '../../modules/user-avatar/user-avatar.module';
-import { CommentLinksPipe } from './db-comments/comment-links.pipe';
-import { AchievementComponent } from './achievement/achievement.component';
-import { PatchComponent } from './patch/patch.component';
-import { FishComponent } from './fish/fish.component';
-import { NgxChartsModule } from '@swimlane/ngx-charts';
-import { FishingSpotComponent } from './fishing-spot/fishing-spot.component';
-import { QuickSearchModule } from '../../modules/quick-search/quick-search.module';
-import { ItemDetailsPopupsModule } from '../../modules/item-details/item-details-popups.module';
+import { NzStatisticModule } from 'ng-zorro-antd/statistic';
+import { NzCommentModule } from 'ng-zorro-antd/comment';
+import { NzAvatarModule } from 'ng-zorro-antd/avatar';
+import { LazyScrollModule } from '../../modules/lazy-scroll/lazy-scroll.module';
+import { SpearfishingSpotComponent } from './spearfishing-spot/spearfishing-spot.component';
 
 const routes: Routes = [
   {
@@ -144,6 +176,12 @@ const routes: Routes = [
       },
 
       {
+        path: 'spearfishing-spot/:spotId',
+        component: SpearfishingSpotComponent,
+        canActivate: [MaintenanceGuard, VersionLockGuard]
+      },
+
+      {
         path: 'action/:actionId',
         component: ActionComponent,
         canActivate: [MaintenanceGuard, VersionLockGuard]
@@ -224,6 +262,7 @@ const routes: Routes = [
     FateComponent,
     MapPageComponent,
     NodeComponent,
+    SpearfishingSpotComponent,
     ActionComponent,
     StatusComponent,
     TraitComponent,
@@ -233,22 +272,38 @@ const routes: Routes = [
     AchievementComponent,
     PatchComponent,
     FishComponent,
-    FishingSpotComponent
+    FishingSpotComponent,
+    FishingMissesPopupComponent,
+    FishHoursComponent,
+    FishBaitsComponent,
+    FishHooksetsComponent,
+    FishSpotsListComponent,
+    FishBiteTimesComponent,
+    FishWeathersComponent,
+    FishWeatherTransitionsComponent,
+    FishMoochesComponent,
+    FishTopUsersComponent,
+    FishUserRankingComponent,
+    FishDetailsContainerComponent,
+    FishingSpotHoursComponent,
+    FishingSpotBiteTimesComponent,
+    FishingSpotPositionComponent,
+    FishingSpotWeathersComponent,
+    FishingSpotWeatherTransitionsComponent,
+    FishingSpotAvailableFishesComponent,
+    FishingSpotDatagridComponent,
+    FishingSpotBaitDatagridComponent,
+    FishingSpotWeatherDatagridComponent,
+    FishingSpotTugDatagridComponent
   ],
-  entryComponents: [ModelViewerComponent],
   imports: [
     CommonModule,
-
     RouterModule.forChild(routes),
-
     CoreModule,
     FlexLayoutModule,
     FormsModule,
-
     TranslateModule,
-
     NgxChartsModule,
-
     MapModule,
     PipesModule,
     ItemIconModule,
@@ -260,12 +315,17 @@ const routes: Routes = [
     ListModule,
     RotationsModule,
     ItemDetailsPopupsModule,
+    I18nDisplayModule,
     MarketboardModule,
-
-    NgZorroAntdModule,
+    AntdSharedModule,
     UserAvatarModule,
-    QuickSearchModule
-  ]
+    QuickSearchModule,
+    NzStatisticModule,
+    NzCommentModule,
+    NzAvatarModule,
+    LazyScrollModule
+  ],
+  providers: [ItemContextService, FishDataService, FishContextService, ...Object.values(FishGQLProviders)]
 })
 export class DbModule {
 }

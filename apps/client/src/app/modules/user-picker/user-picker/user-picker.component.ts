@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
-import { combineLatest, Observable } from 'rxjs';
+import { combineLatest, Observable, of } from 'rxjs';
 import { FormControl, Validators } from '@angular/forms';
 import { CharacterSearchResult, CharacterSearchResultRow, XivapiService } from '@xivapi/angular-client';
-import { NzModalRef } from 'ng-zorro-antd';
+import { NzModalRef } from 'ng-zorro-antd/modal';
 import { debounceTime, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import { UserService } from '../../../core/database/user.service';
 import { AuthFacade } from '../../../+state/auth.facade';
@@ -38,14 +38,14 @@ export class UserPickerComponent {
               private userService: UserService, private authFacade: AuthFacade) {
     this.servers$ = this.xivapi.getServerList().pipe(shareReplay(1));
 
-    this.autoCompleteRows$ = combineLatest(this.servers$, this.selectedServer.valueChanges)
+    this.autoCompleteRows$ = combineLatest([this.servers$, this.selectedServer.valueChanges])
       .pipe(
         map(([servers, inputValue]) => {
           return servers.filter(server => server.toLowerCase().indexOf(inputValue.toLowerCase()) > -1);
         })
       );
 
-    this.result$ = combineLatest(this.selectedServer.valueChanges, this.characterName.valueChanges)
+    this.result$ = combineLatest([this.selectedServer.valueChanges, this.characterName.valueChanges])
       .pipe(
         tap(() => this.loadingResults = true),
         debounceTime(500),
@@ -54,6 +54,9 @@ export class UserPickerComponent {
         }),
         map((result: CharacterSearchResult) => result.Results || []),
         switchMap(results => {
+          if (results.length === 0) {
+            return of([]);
+          }
           return combineLatest(
             results.map(c => {
               return this.userService.getUsersByLodestoneId(c.ID)
@@ -69,7 +72,7 @@ export class UserPickerComponent {
                   })
                 );
             })
-          ).pipe(map(res => [].concat.apply([], ...res)));
+          ).pipe(map(res => [].concat.apply([], res)));
         }),
         tap(() => this.loadingResults = false)
       );

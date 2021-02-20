@@ -12,9 +12,35 @@
   }
 }
 
+.nav-buttons {
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.svg-icon {
+  font-size: 20px;
+  margin-right: 10px;
+  margin-left: -2px
+}
+
 .download-spinner {
-  height: 64px;
+  height: @layout-header-height;
   width: 32px;
+}
+
+.update-status {
+  margin-left: 10px;
+}
+
+.venatus-container {
+  box-sizing: border-box;
+  width: 728px;
+}
+
+.notifications-list {
+  width: 300px
 }
 
 .support-us {
@@ -25,15 +51,6 @@
     font-size: 11px;
   }
 }
-
-.tips-container {
-  height: 64px;
-
-  .tips {
-    line-height: 12px;
-  }
-}
-
 
 .wiki-link {
   margin: 0 10px;
@@ -60,7 +77,12 @@
   }
 
   .language-swap {
-    margin: auto 0 auto 11px;
+    margin: auto 10px;
+  }
+
+  .tutorial-start {
+    cursor: pointer;
+    margin-right: 10px;
   }
 }
 
@@ -90,7 +112,7 @@
 
   .sider {
     .ant-layout-sider-children {
-      overflow: auto;
+      overflow-y: auto;
     }
   }
 
@@ -108,7 +130,7 @@
 }
 
 .content-container {
-  margin-top: 64px;
+  margin-top: @layout-header-height;
   height: 100%;
 
   &.overlay {
@@ -118,7 +140,7 @@
 
 .right-menu {
   float: right;
-  line-height: 64px;
+  line-height: @layout-header-height;
 }
 
 .right-sider {
@@ -139,7 +161,7 @@
 .bottom-buttons {
   width: 100%;
   padding-bottom: 64px;
-  padding-top: .1vh;
+  padding-top: 10px;
 }
 
 .overlay-buttons {

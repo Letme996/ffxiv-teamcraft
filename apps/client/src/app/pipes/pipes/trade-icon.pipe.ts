@@ -12,10 +12,10 @@ export class TradeIconPipe implements PipeTransform {
     20: 30, // Storm
     21: 30, // Serpent
     22: 30, // Flame
-    27: 30, // Allied
+    27: 29, // Allied
     10307: 30, // Centurio
     26533: 30, // Sack of nuts (lol)
-    // Scripts
+    // Scrips
     10309: 0, // Red crafter
     10311: 0, // Red gatherer
     17833: 30, // Yellow crafter
@@ -27,8 +27,10 @@ export class TradeIconPipe implements PipeTransform {
     35: 0, // Creation (can't obtain them anymore)
     36: 0, // Mendacity
     37: 0, // Genesis
-    38: 28, // Goetia
-    39: 25, // Phantasmagoria
+    38: 0, // Goetia
+    39: 0, // Phantasmagoria
+    40: 25, // Allegory
+    41: 25, // Revelation
     7811: 28, // Rowena's Token (Soldiery)
     9383: 28, // Rowena's Token (Poetics)
     14298: 28, // Rowena's Token (Lore)

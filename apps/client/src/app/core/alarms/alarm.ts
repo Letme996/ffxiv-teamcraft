@@ -1,4 +1,3 @@
-import { Vector2 } from '../tools/vector2';
 import { DataModel } from '../database/storage/data-model';
 import { ForeignKey } from '../database/relational/foreign-key';
 import { TeamcraftUser } from '../../model/user/teamcraft-user';
@@ -6,25 +5,24 @@ import { Aetheryte } from '../data/aetheryte';
 import { AlarmGroup } from './alarm-group';
 import { CompactMasterbook } from '../../model/common/compact-masterbook';
 import { FishingBait } from '../../modules/list/model/fishing-bait';
+import { Vector3 } from '../tools/vector3';
 
 export class Alarm extends DataModel {
 
   @ForeignKey(TeamcraftUser)
   userId?: string;
-
-  @ForeignKey(AlarmGroup)
-  groupId?: string;
+  groupNames?: string;
 
   itemId: number;
+  nodeId?: number;
   // Use for custom alarms
   name?: string;
-  icon: number;
   spawns: number[];
   duration: number;
-  slot: number | string;
   zoneId: number;
+  areaId: number;
   mapId: number;
-  coords: Vector2;
+  coords: Vector3;
   /**
    * Type of the node.
    * 0,1 = MIN
@@ -33,19 +31,26 @@ export class Alarm extends DataModel {
    */
   type: number;
 
-  baits?: FishingBait[];
+  /**
+   * With 5.4, SE changes fish eyes so it allows to ignore time requirement,
+   * because of that, this boolean now indicates if the alarm is only possible
+   * with fishEyes enabled.
+   */
+  fishEyes?: boolean;
+
+  hookset?: string;
+  baits?: number[];
   gig?: string;
   weathers?: number[];
   weathersFrom?: number[];
   snagging?: boolean;
-  fishEyes?: boolean;
-  predators?: { id: number, icon: number, amount: number }[];
+  predators?: { id: number, amount: number }[];
 
   note: string;
 
   aetheryte: Aetheryte;
 
-  folklore?: CompactMasterbook;
+  folklore?: number;
 
   reduction?: boolean;
 

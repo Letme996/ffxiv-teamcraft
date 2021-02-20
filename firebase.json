@@ -11,6 +11,11 @@
         "source": "/desktop",
         "destination": "https://github.com/ffxiv-teamcraft/ffxiv-teamcraft/releases/latest",
         "type": 301
+      },
+      {
+        "source": "/ads.txt",
+        "destination": "http://adstxt.venatusmedia.com/master_ads.txt",
+        "type": 304
       }
     ],
     "rewrites": [
@@ -30,14 +35,42 @@
         ]
       },
       {
+        "source": "**/*.@(js)",
+        "headers": [
+          {
+            "key": "Cache-control",
+            "value": "max-age=31536000"
+          }
+        ]
+      },
+      {
+        "source": "**/extracts.json",
+        "headers": [
+          {
+            "key": "Cache-control",
+            "value": "max-age=31536000"
+          }
+        ]
+      },
+      {
+        "source": "**/data/*.@(json)",
+        "headers": [
+          {
+            "key": "Cache-control",
+            "value": "max-age=31536000"
+          }
+        ]
+      },
+      {
         "source": "**/*.html",
         "headers": [
           {
             "key": "Cache-control",
-            "value": "max-age=0"
+            "value": "max-age=120"
           }
         ]
       }
     ]
   }
 }
+

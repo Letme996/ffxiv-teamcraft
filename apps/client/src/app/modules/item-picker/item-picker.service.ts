@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { NzModalService } from 'ng-zorro-antd';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { SearchResult } from '../../model/search/search-result';
 import { Observable } from 'rxjs';
 import { ItemPickerComponent } from './item-picker/item-picker.component';
@@ -15,6 +15,7 @@ export class ItemPickerService {
     return this.dialog.create({
       nzContent: ItemPickerComponent,
       nzFooter: null,
+      nzCloseOnNavigation: true,
       nzTitle: this.translate.instant('Pick_an_item')
     }).afterClose;
   }
@@ -23,6 +24,7 @@ export class ItemPickerService {
     return this.dialog.create({
       nzContent: ItemPickerComponent,
       nzFooter: null,
+      nzCloseOnNavigation: true,
       nzComponentParams: {
         multi: true
       },

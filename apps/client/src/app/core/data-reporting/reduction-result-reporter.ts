@@ -1,46 +1,28 @@
 import { Observable } from 'rxjs';
 import { ofPacketSubType } from '../rxjs/of-packet-subtype';
 import { DataReporter } from './data-reporter';
-import { MachinaService } from '../electron/machina.service';
-import { delay, filter, map, withLatestFrom } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
+import { BasePacket, ReductionResult } from '../../model/pcap';
 
 export class ReductionResultReporter implements DataReporter {
 
-  constructor(private machina: MachinaService) {
-  }
-
-  getDataReports(packets$: Observable<any>): Observable<any[]> {
+  getDataReports(packets$: Observable<BasePacket>): Observable<any[]> {
     const reductionResults$ = packets$.pipe(
-      ofPacketSubType('aetherReductionDlg')
-    );
-
-    const inventoryPatches$ = this.machina.inventoryPatches$.pipe(
-      filter(patch => {
-        return patch.quantity < 0 && patch.spiritBond && patch.spiritBond > 0;
-      })
+      ofPacketSubType<ReductionResult>('reductionResult')
     );
 
     return reductionResults$.pipe(
-      delay(500),
-      withLatestFrom(inventoryPatches$),
-      map(([packet, patch]) => {
-        return packet.resultItems.map(item => {
+      map((packet) => {
+        return packet.result.map(item => {
           return {
-            itemId: patch.itemId,
-            purity: this.getPurity(patch.spiritBond),
-            collectability: patch.spiritBond,
+            itemId: packet.itemId,
             resultItemId: item.itemId,
-            resultItemQuantity: item.quantity,
-            resultItemHQ: item.hq
+            resultItemQuantity: item.itemQuantity,
+            resultItemHQ: item.itemHq
           };
         });
       })
     );
-  }
-
-  getPurity(collectability: number): number {
-    const purities = [300, 350, 400, 450, 500, 525, 550, 1000];
-    return purities.filter(purity => purity <= collectability).length + 1;
   }
 
   getDataType(): string {

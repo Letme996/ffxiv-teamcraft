@@ -1,8 +1,8 @@
 <nz-collapse>
-  <nz-collapse-panel [nzHeader]="panelHeader">
+  <nz-collapse-panel [nzHeader]="panelHeader" #panel>
     <div (drop)="onCraftingRotationDrop($event)" (remove)="removeCraftingRotation($event.value)" [removeOnSpill]="true"
          class="ngx-dnd-container rotations-container"
-         fxLayout="column" fxLayoutGap="5px" ngxDroppable="rotation">
+         fxLayout="column" fxLayoutGap="5px" ngxDroppable="rotation" *ngIf="panel.nzActive">
       <ng-container *ngFor="let rotation of rotations; trackBy: trackByCraftingRotation">
         <div *ngIf="rotation !== undefined"
              [model]="rotation"
@@ -20,18 +20,23 @@
       </div>
       <div fxLayout="row" fxLayoutAlign="flex-end center" fxLayoutGap="2px" nz-col nzMd="4">
         <a (click)="$event.stopPropagation()" [nzShape]="'circle'"
-           [nzTitle]="'SIMULATOR.ROTATIONS.FOLDERS.Open' | translate" [nzType]="'primary'"
+           [nzTooltipTitle]="'SIMULATOR.ROTATIONS.FOLDERS.Open' | translate" [nzType]="'primary'"
            nz-button
            nz-tooltip
            routerLink="/rotation-folder/{{_folder.$key}}">
           <i nz-icon nzType="folder-open"></i>
         </a>
-        <button (cbOnSuccess)="afterLinkCopy()" (click)="$event.stopPropagation()" [cbContent]="getLink()" [nzShape]="'circle'" [nzTitle]="'LIST.BUTTONS.Share_description' | translate"
+        <button (click)="$event.stopPropagation()"
+                [clipboard]="getLink"
+                [clipboardSuccessMessage]="'SIMULATOR.ROTATIONS.FOLDERS.Share_link_copied' | translate"
+                [nzShape]="'circle'" [nzTooltipTitle]="'LIST.BUTTONS.Share_description' | translate"
                 [nzType]="'primary'"
-                ngxClipboard nz-button nz-tooltip>
+                nz-button nz-tooltip>
           <i nz-icon nzType="share-alt"></i>
         </button>
-        <button (click)="$event.stopPropagation(); addRotations()" *ngIf="(permissionLevel$ | async) >= 30" [nzShape]="'circle'" [nzTitle]="'SIMULATOR.ROTATIONS.FOLDERS.Add_rotations' | translate"
+        <app-favorite-button (click)="$event.stopPropagation()" type="rotationFolders" [key]="_folder.$key"></app-favorite-button>
+        <button (click)="$event.stopPropagation(); addRotations()" *ngIf="(permissionLevel$ | async) >= 30" [nzShape]="'circle'"
+                [nzTooltipTitle]="'SIMULATOR.ROTATIONS.FOLDERS.Add_rotations' | translate"
                 [nzType]="'primary'"
                 nz-button
                 nz-tooltip>
@@ -39,11 +44,12 @@
         </button>
         <button (click)="$event.stopPropagation()" (nzOnConfirm)="deleteFolder()" *ngIf="(permissionLevel$ | async) >= 40"
                 [nzShape]="'circle'"
-                [nzTitle]="'SIMULATOR.ROTATIONS.FOLDERS.Delete_message' | translate" [nzType]="'danger'" nz-button
+                [nzPopconfirmTitle]="'SIMULATOR.ROTATIONS.FOLDERS.Delete_message' | translate" [nzType]="'danger'" nz-button
                 nz-popconfirm>
           <i nz-icon nzType="delete"></i>
         </button>
-        <button (click)="$event.stopPropagation()" *ngIf="(permissionLevel$ | async) >= 30" [nzBackdrop]="false" [nzDropdownMenu]="menu" [nzPlacement]="'bottomRight'"
+        <button (click)="$event.stopPropagation()" *ngIf="(permissionLevel$ | async) >= 30" [nzDropdownMenu]="menu"
+                [nzPlacement]="'bottomRight'"
                 [nzShape]="'circle'" [nzTrigger]="'click'" nz-button
                 nz-dropdown>
           <i nz-icon nzType="ellipsis"></i>
@@ -62,7 +68,9 @@
                     {{'CUSTOM_LINKS.Add_link' | translate}}
                   </li>
                   <ng-template #copyLink>
-                    <li (cbOnSuccess)="afterCustomLinkCopy()" *ngIf="customLink$ | async as link" [cbContent]="link.getUrl()" ngxClipboard
+                    <li *ngIf="customLink$ | async as link"
+                        [clipboard]="link.getUrl()"
+                        [clipboardSuccessMessage]="'CUSTOM_LINKS.Share_link_copied' | translate"
                         nz-menu-item>
                       {{'CUSTOM_LINKS.Copy_custom_link' | translate}}
                     </li>

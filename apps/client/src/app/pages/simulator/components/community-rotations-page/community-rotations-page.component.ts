@@ -110,6 +110,14 @@ export class CommunityRotationsPageComponent {
     {
       label: '80 ★★',
       value: 450
+    },
+    {
+      label: '80 ★★★',
+      value: 480
+    },
+    {
+      label: '80 ★★★★',
+      value: 510
     }
   ].sort((a, b) => a.value - b.value);
 
@@ -128,6 +136,8 @@ export class CommunityRotationsPageComponent {
   public craftsmanshipFilter$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
   public controlFilter$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
   public cpFilter$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
+  public difficultyFilter$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
+  public qualityFilter$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
 
   public page$: BehaviorSubject<number> = new BehaviorSubject<number>(1);
 
@@ -138,7 +148,7 @@ export class CommunityRotationsPageComponent {
   public sets$ = this.authFacade.gearSets$.pipe(map(sets => sets.filter(set => set.jobId <= 15)));
   public setIndex$ = new BehaviorSubject<number>(0);
 
-  public set$ = combineLatest(this.setIndex$, this.sets$).pipe(
+  public set$ = combineLatest([this.setIndex$, this.sets$]).pipe(
     filter(([, sets]) => sets !== null),
     map(([index, sets]) => sets[index])
   );
@@ -159,9 +169,18 @@ export class CommunityRotationsPageComponent {
         label: `SIMULATOR.COMMUNITY_ROTATIONS.TAGS.${key}`
       };
     });
-    this.filters$ = combineLatest(this.nameFilter$, this.tagsFilter$, this.rlvlFilter$, this.durabilityFilter$,
-      this.craftsmanshipFilter$, this.controlFilter$, this.cpFilter$).pipe(
-      tap(([name, tags, rlvl, durability, craftsmanship, control, cp]) => {
+    this.filters$ = combineLatest([
+      this.nameFilter$,
+      this.tagsFilter$,
+      this.rlvlFilter$,
+      this.durabilityFilter$,
+      this.craftsmanshipFilter$,
+      this.controlFilter$,
+      this.cpFilter$,
+      this.difficultyFilter$,
+      this.qualityFilter$
+    ]).pipe(
+      tap(([name, tags, rlvl, durability, craftsmanship, control, cp, difficulty, quality]: any[]) => {
         this.page$.next(1);
         const queryParams = {};
         if (name !== '') {
@@ -192,12 +211,20 @@ export class CommunityRotationsPageComponent {
           this.firstDisplay = false;
           queryParams['cp'] = cp;
         }
+        if (difficulty !== null) {
+          this.firstDisplay = false;
+          queryParams['difficulty'] = difficulty;
+        }
+        if (quality !== null) {
+          this.firstDisplay = false;
+          queryParams['quality'] = quality;
+        }
         router.navigate([], {
           queryParams: queryParams,
           relativeTo: route
         });
       }),
-      map(([name, tags, rlvl, durability, craftsmanship, control, cp]) => {
+      map(([name, tags, rlvl, durability, craftsmanship, control, cp, difficulty, quality]) => {
         return {
           name: name,
           tags: tags,
@@ -205,7 +232,9 @@ export class CommunityRotationsPageComponent {
           durability: durability,
           craftsmanship: craftsmanship,
           control: control,
-          cp: cp
+          cp: cp,
+          difficulty: difficulty,
+          quality: quality
         };
       })
     );
@@ -231,6 +260,12 @@ export class CommunityRotationsPageComponent {
         if (query.get('cp') !== null) {
           this.cpFilter$.next(+query.get('cp'));
         }
+        if (query.get('difficulty') !== null) {
+          this.difficultyFilter$.next(+query.get('difficulty'));
+        }
+        if (query.get('quality') !== null) {
+          this.qualityFilter$.next(+query.get('quality'));
+        }
       });
     this.filteredRotations$ = this.filters$.pipe(
       tap(() => this.loading = true),
@@ -240,8 +275,11 @@ export class CommunityRotationsPageComponent {
           ...filters,
           tags: filters.tags
         }).pipe(
-          tap(rotations => {
+          map(rotations => {
             this.totalLength = rotations.length;
+            return rotations.sort((a,b) => {
+              return a.rotation.length - b.rotation.length
+            })
           }),
           switchMap(rotations => {
             return this.page$.pipe(map(page => {

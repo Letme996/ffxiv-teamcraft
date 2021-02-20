@@ -4,11 +4,12 @@
       <img alt="{{action.ID | actionName | i18n}}" src="https://xivapi.com{{action.Icon}}">
     </div>
     <div class="name">
-      <p>{{action.ID | actionName | i18n}}</p>
+      <div>{{action.ID | actionName | i18n}}</div>
+      <i *ngIf="state > 1" class="state" [style.color]="stateColor">{{('SIMULATOR.STATE.' + stateName) | translate}}</i>
     </div>
   </div>
   <div class="description">
-    <span [innerHtml]="action | xivapiI18n: 'Description' | xivUIText"></span>
+    <span [innerHtml]="getDescription(action) | xivUIText"></span>
   </div>
   <div class="details">
     <div *ngFor="let row of details" nz-row nzGutter="10">
@@ -22,7 +23,7 @@
           {{row.value}}
         </p>
         <p *ngIf="row.requiresPipe" class="detail-value">
-          {{row.value | xivapiI18n}}
+          {{row.value | i18n}}
         </p>
       </div>
     </div>

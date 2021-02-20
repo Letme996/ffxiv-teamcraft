@@ -2,7 +2,6 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TeamsComponent } from './teams/teams.component';
 import { RouterModule, Routes } from '@angular/router';
-import { NgZorroAntdModule } from 'ng-zorro-antd';
 import { TeamsModule } from '../../modules/teams/teams.module';
 import { TranslateModule } from '@ngx-translate/core';
 import { FlexLayoutModule } from '@angular/flex-layout';
@@ -13,9 +12,11 @@ import { UserAvatarModule } from '../../modules/user-avatar/user-avatar.module';
 import { PipesModule } from '../../pipes/pipes.module';
 import { FormsModule } from '@angular/forms';
 import { TeamInviteComponent } from './team-invite/team-invite.component';
-import { ClipboardModule } from 'ngx-clipboard';
+
 import { MaintenanceGuard } from '../maintenance/maintenance.guard';
 import { VersionLockGuard } from '../version-lock/version-lock.guard';
+import { AntdSharedModule } from '../../core/antd-shared.module';
+import { CoreModule } from '../../core/core.module';
 
 const routes: Routes = [
   {
@@ -34,14 +35,14 @@ const routes: Routes = [
   imports: [
     CommonModule,
     FormsModule,
+    CoreModule,
 
-    ClipboardModule,
     FlexLayoutModule,
     TranslateModule,
     TeamsModule,
     UserAvatarModule,
     PipesModule,
-    NgZorroAntdModule,
+    AntdSharedModule,
     FullpageMessageModule,
     PageLoaderModule,
     NameQuestionPopupModule,

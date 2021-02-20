@@ -10,10 +10,12 @@
   <ng-container *ngTemplateOutlet="listsDisplay; context: {$implicit: workshopDisplay.lists}"></ng-container>
 </div>
 
-<div fxLayout="row" fxLayoutGap="10px">
+<div fxLayout="row" fxLayoutGap="10px" fxLayoutAlign="flex-start center">
   <button (click)="merge()" [disabled]="selectedLists.length < 2 || merging" nz-button>{{'Confirm' | translate}}
   </button>
-  <label [(ngModel)]="deleteAfter" nz-checkbox>{{'LISTS.Delete_after_merge' | translate}}</label>
+  <div>
+    <label [(ngModel)]="deleteAfter" nz-checkbox>{{'LISTS.Delete_after_merge' | translate}}</label>
+  </div>
 </div>
 
 <ng-template #listsDisplay let-lists>
@@ -22,18 +24,18 @@
       <nz-list-item>
         <nz-list-item-meta [nzAvatar]="checkbox" [nzDescription]="description" [nzTitle]="list.name">
           <ng-template #checkbox>
-            <label (ngModelChange)="setSelection(list, $event)" [ngModel]="false" [nzDisabled]="list.isOutDated()"
+            <label (ngModelChange)="setSelection(list, $event)" [ngModel]="false" [nzDisabled]="list.isOutDated() || list.isLarge()"
                    nz-checkbox></label>
           </ng-template>
           <ng-template #description>
-            <nz-tag *ngIf="list.ephemeral" [nzColor]="'volcano'" [nzTitle]="'Ephemeral_list' | translate" nz-tooltip>
+            <nz-tag *ngIf="list.ephemeral" [nzColor]="'volcano'" [nzTooltipTitle]="'Ephemeral_list' | translate" nz-tooltip>
               {{'Ephemeral_tag' | translate}}
             </nz-tag>
-            <nz-tag *ngIf="list.public" [nzColor]="'geekblue'" [nzTitle]="'LIST_DETAILS.HELP.Public_list' | translate"
+            <nz-tag *ngIf="list.public" [nzColor]="'geekblue'" [nzTooltipTitle]="'LIST_DETAILS.HELP.Public_list' | translate"
                     nz-tooltip>
               {{'Public_list' | translate}}
             </nz-tag>
-            <nz-tag *ngIf="list.isOutDated()" [nzColor]="'magenta'" [nzTitle]="'LIST_TAGS.Outdated' | translate"
+            <nz-tag *ngIf="list.isOutDated()" [nzColor]="'magenta'" [nzTooltipTitle]="'LIST_TAGS.Outdated' | translate"
                     nz-tooltip></nz-tag>
             <nz-tag *ngFor="let tag of list.tags">{{('LIST_TAGS.' + tag) | uppercase | translate}}</nz-tag>
           </ng-template>

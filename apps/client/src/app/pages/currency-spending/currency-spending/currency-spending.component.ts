@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { SearchIndex, XivapiService } from '@xivapi/angular-client';
 import { BehaviorSubject, combineLatest, Observable, of, Subject } from 'rxjs';
 import { map, switchMap, takeUntil, tap } from 'rxjs/operators';
@@ -16,7 +16,7 @@ import { UniversalisService } from '../../../core/api/universalis.service';
   templateUrl: './currency-spending.component.html',
   styleUrls: ['./currency-spending.component.less']
 })
-export class CurrencySpendingComponent extends TeamcraftComponent {
+export class CurrencySpendingComponent extends TeamcraftComponent implements OnInit {
 
   public currencies$: Observable<any>;
 
@@ -41,23 +41,6 @@ export class CurrencySpendingComponent extends TeamcraftComponent {
       })
     );
 
-    this.authFacade.loggedIn$.pipe(
-      switchMap(loggedIn => {
-        if (loggedIn) {
-          return this.authFacade.mainCharacter$.pipe(
-            map(character => character.Server)
-          );
-        } else {
-          return of(null);
-        }
-      }),
-      takeUntil(this.onDestroy$)
-    ).subscribe(server => {
-      if (server !== null) {
-        this.server$.next(server);
-      }
-    });
-
     this.currencies$ = this.xivapi.search({
       indexes: [SearchIndex.ITEM],
       filters: [
@@ -76,7 +59,7 @@ export class CurrencySpendingComponent extends TeamcraftComponent {
       map(res => {
         return res.Results.filter(item => {
           // Remove gil, venture and outdated tomes/scrips
-          return [1, 23, 24, 26, 30, 31, 32, 33, 34, 35, 10308, 10310, 21072].indexOf(item.ID) === -1;
+          return [1, 23, 24, 26, 30, 31, 32, 33, 34, 35, 10308, 10309, 10310, 10311, 21072].indexOf(item.ID) === -1;
         });
       })
     );
@@ -86,7 +69,7 @@ export class CurrencySpendingComponent extends TeamcraftComponent {
         this.loading = true;
         return this.dataService.getItem(currency).pipe(
           map((item: ItemData) => {
-            return [].concat.apply([], item.item.tradeCurrency.map(entry => {
+            return [].concat.apply([], item.item.tradeCurrency.filter(entry => entry.npcs.length > 0).map(entry => {
               return entry.listings.map(listing => {
                 const currencyEntry = listing.currency.find(c => +c.id === currency);
                 return {
@@ -148,6 +131,25 @@ export class CurrencySpendingComponent extends TeamcraftComponent {
       }),
       tap(() => this.loading = false)
     );
+  }
+
+  ngOnInit(): void {
+    this.authFacade.loggedIn$.pipe(
+      switchMap(loggedIn => {
+        if (loggedIn) {
+          return this.authFacade.mainCharacter$.pipe(
+            map(character => character.Server)
+          );
+        } else {
+          return of(null);
+        }
+      }),
+      takeUntil(this.onDestroy$)
+    ).subscribe(server => {
+      if (server !== null) {
+        this.server$.next(server);
+      }
+    });
   }
 
 }

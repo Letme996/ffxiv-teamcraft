@@ -1,16 +1,32 @@
 import { Injectable } from '@angular/core';
-import { I18nName } from '../../model/common/i18n-name';
 import { TranslateService } from '@ngx-translate/core';
-import { I18nData } from '../../model/common/i18n-data';
+import { BehaviorSubject, of } from 'rxjs';
 import { Observable } from 'rxjs/Observable';
-import { map } from 'rxjs/operators';
+import { map, switchMap } from 'rxjs/operators';
+import { I18nData } from '../../model/common/i18n-data';
+import { I18nName } from '../../model/common/i18n-name';
+import { I18nNameLazy } from '../../model/common/i18n-name-lazy';
 import { CustomItem } from '../../modules/custom-items/model/custom-item';
+import { Language } from '../data/language';
 
-@Injectable()
+@Injectable({ providedIn: 'root' })
 export class I18nToolsService {
+  private readonly defaultLang = 'en' as const;
+  public readonly currentLang$: BehaviorSubject<Language> = new BehaviorSubject<Language>(this.defaultLang);
 
   constructor(private translator: TranslateService) {
+    // I know, subscriptions are devil, but since we're inside a `providedIn: "root"` service, we know only one instance of this will run at a time, meaning
+    // No memory leaks :)
+    this.translator.onLangChange.subscribe(ev => this.currentLang$.next(ev.lang));
   }
+
+  public resolveName = (i18nName: I18nNameLazy): Observable<string | undefined> => {
+    return this.currentLang$.pipe(
+      switchMap((lang) => {
+        return i18nName[lang] ?? i18nName[this.defaultLang] ?? of(undefined);
+      })
+    );
+  };
 
   public getName(i18nName: I18nName, item?: CustomItem): string {
     if (i18nName === undefined) {
@@ -46,10 +62,9 @@ export class I18nToolsService {
 
   public getTranslation(key: string, language: string, interpolationParams?: Object): Observable<string> {
     return this.translator.getTranslation(language).pipe(
-      map(translations => {
+      map((translations) => {
         return this.translator.getParsedResult(translations, key, interpolationParams);
       })
     );
   }
-
 }

@@ -2,37 +2,35 @@ defaults: &defaults
   working_directory: ~/ffxiv-teamcraft
   docker:
     - image: supamiu/circleci-node-wine
-  resource_class: medium+
 
 
-version: 2
+version: 2.1
+orbs:
+  win: circleci/windows@2.2.0
 jobs:
   setup:
     <<: *defaults
+    resource_class: large
     steps:
       - checkout
       - run:
           name: Show current branch
           command: echo ${CIRCLE_BRANCH}
-      - run:
-          name: Update npm
-          command: sudo npm i -g npm
       - restore_cache:
+          name: Restore Yarn Package Cache
           keys:
-            - v2-deps-{ .Branch }-{ checksum "package.json" }
-            - v2-deps-{ .Branch }
-            - v2-deps
+            - yarn-packages-{{ checksum "yarn.lock" }}
       - run:
           name: Install local dependencies
-          command: npm ci
+          command: yarn install --immutable
       - run:
           name: Install functions dependencies
           command: cd functions && npm install && cd ../
       - save_cache:
-          key: v2-deps-{ .Branch }-{ checksum "package.json" }
+          name: Save Yarn Package Cache
+          key: yarn-packages-{{ checksum "yarn.lock" }}
           paths:
-            - ~/.cache
-            - ~/.npm
+            - ~/.cache/yarn
       - persist_to_workspace:
           root: ~/
           paths:
@@ -47,7 +45,7 @@ jobs:
           at: ~/
       - run:
           name: Lint code and JSON
-          command: npm run lint
+          command: yarn run lint
 
 
   test:
@@ -57,10 +55,11 @@ jobs:
           at: ~/
       - run:
           name: Testing
-          command: npm run test
+          command: yarn run test
       - run:
           name: Codecov upload
-          command: npm run codecov
+          command: yarn run codecov
+
 
   e2e:
     <<: *defaults
@@ -69,11 +68,13 @@ jobs:
           at: ~/
       - run:
           name: Testing
-          command: npm run e2e:ci
+          command: yarn run e2e:ci
 
 
   build:
-    <<: *defaults
+    working_directory: ~/ffxiv-teamcraft
+    docker:
+      - image: supamiu/circleci-node-wine
     steps:
       - attach_workspace:
           at: ~/
@@ -81,32 +82,16 @@ jobs:
           name: Building
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-                npm run build:prod
+                yarn run build:prod
             else
-                npm run build:beta
+                yarn run build:beta
             fi
-      - save_cache:
-          key: dist-{{ .Environment.CIRCLE_BRANCH }}-{{ .Environment.CIRCLE_SHA1 }}
-          paths:
-            - dist
+          no_output_timeout: 30m
       - persist_to_workspace:
           root: ~/
           paths:
-            - ffxiv-teamcraft/*
+            - ffxiv-teamcraft/dist/*
             - .cache/*
-
-
-  deploy-cdn:
-    <<: *defaults
-    steps:
-      - add_ssh_keys:
-          fingerprints:
-            - "96:02:36:2b:33:81:70:ce:37:3d:f8:9b:e5:ac:65:30"
-      - attach_workspace:
-          at: ~/
-      - run:
-          name: Deploying cdn
-          command: bash tools/cdn/deploy.sh
 
 
   deploy-firebase-hosting:
@@ -128,14 +113,26 @@ jobs:
           name: Deploying functions
           command: ./node_modules/.bin/firebase deploy -P default --only functions --token "$FIREBASE_TOKEN"
 
-  deploy-desktop:
-    <<: *defaults
+  release-desktop:
+    executor: win/default
+    working_directory: ~/ffxiv-teamcraft
     steps:
       - attach_workspace:
           at: ~/
+      - restore_cache:
+          keys:
+            - v2-deps-{ .Branch }-{ checksum "yarn.lock" }
       - run:
-          name: Deploying desktop
-          command: npm run electron:setup:publish
+          name: Reinstalling dependencies for windows
+          command: yarn install --immutable
+      - run:
+          name: Deploying desktop on github
+          no_output_timeout: 30m
+          command: yarn run electron:setup:publish
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - ffxiv-teamcraft/release/*
 
 
   deploy-staging:
@@ -156,6 +153,19 @@ jobs:
       - run:
           name: Deploying functions
           command: ./node_modules/.bin/firebase deploy -P beta --only functions --token "$FIREBASE_TOKEN"
+
+
+  deploy-cdn:
+    <<: *defaults
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "96:02:36:2b:33:81:70:ce:37:3d:f8:9b:e5:ac:65:30"
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Deploying cdn to OVH server
+          command: bash tools/cdn/deploy.sh
 
 
 workflows:
@@ -181,7 +191,7 @@ workflows:
               only: master
       - deploy-firebase-hosting:
           requires:
-            - build
+            - deploy-cdn
           filters:
             branches:
               only: master
@@ -191,9 +201,10 @@ workflows:
           filters:
             branches:
               only: master
-      - deploy-desktop:
+      - release-desktop:
           requires:
-            - build
+            - lint
+            - test
           filters:
             branches:
               only: master

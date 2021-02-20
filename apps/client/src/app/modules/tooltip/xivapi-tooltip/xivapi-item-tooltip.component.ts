@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
+import { LocalizedDataService } from '../../../core/data/localized-data.service';
+import { LazyDataService } from '../../../core/data/lazy-data.service';
 
 @Component({
   selector: 'app-xivdb-tooltip-component',
@@ -7,6 +9,9 @@ import { ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class XivapiItemTooltipComponent implements OnInit {
+
+  constructor(private l12n: LocalizedDataService, private lazyData: LazyDataService) {
+  }
 
   @Input() item: any;
 
@@ -17,10 +22,13 @@ export class XivapiItemTooltipComponent implements OnInit {
 
   public stats = [];
 
+  public patch: any;
+
   ngOnInit(): void {
     if (this.item === undefined) {
       return;
     }
+    this.patch = this.lazyData.patches.find(patch => patch.ID === this.item.Patch);
     this.mainAttributes.push({
       name: 'TOOLTIP.Level',
       value: this.item.LevelEquip
@@ -64,7 +72,7 @@ export class XivapiItemTooltipComponent implements OnInit {
       .map(key => {
         const statIndex = key.match(/(\d+)/)[0];
         const res: any = {
-          name: this.item[key],
+          name: this.l12n.xivapiToI18n(this.item[key], 'baseParams'),
           value: this.item[`BaseParamValue${statIndex}`],
           requiresPipe: true
         };
@@ -94,7 +102,7 @@ export class XivapiItemTooltipComponent implements OnInit {
         const max = food[`Max${i}`];
         const maxHq = food[`MaxHQ${i}`];
         if (value > 0) {
-          statsEntry.name = food[`BaseParam${i}`];
+          statsEntry.name = this.l12n.xivapiToI18n(food[`BaseParam${i}`], 'baseParams');
           statsEntry.requiresPipe = true;
           if (isRelative) {
             statsEntry.value = `${value}% (${max})`;
@@ -105,6 +113,10 @@ export class XivapiItemTooltipComponent implements OnInit {
           this.stats.push(statsEntry);
         }
       }
+    }
+
+    if (this.item.ItemSpecialBonus) {
+      this.item.SetBonuses = this.lazyData.data.itemSetBonuses[this.item.ID]?.bonuses;
     }
   }
 

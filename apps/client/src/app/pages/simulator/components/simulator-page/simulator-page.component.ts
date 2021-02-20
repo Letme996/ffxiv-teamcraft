@@ -1,22 +1,22 @@
 import { Component } from '@angular/core';
-import { Craft } from '../../../../model/garland-tools/craft';
 import { combineLatest, Observable } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Item } from '../../../../model/garland-tools/item';
 import { filter, map, shareReplay, switchMap } from 'rxjs/operators';
 import { DataService } from '../../../../core/api/data.service';
 import { RotationsFacade } from '../../../../modules/rotations/+state/rotations.facade';
-import { SeoPageComponent } from '../../../../core/seo/seo-page-component';
 import { SeoService } from '../../../../core/seo/seo.service';
 import { SeoMetaConfig } from '../../../../core/seo/seo-meta-config';
-import { hwdSupplies } from '../../../../core/data/sources/hwd-supplies';
+import { LazyDataService } from '../../../../core/data/lazy-data.service';
+import { Craft } from '@ffxiv-teamcraft/simulator';
+import { AbstractSimulationPage } from '../../abstract-simulation-page';
 
 @Component({
   selector: 'app-simulator-page',
   templateUrl: './simulator-page.component.html',
   styleUrls: ['./simulator-page.component.less']
 })
-export class SimulatorPageComponent extends SeoPageComponent {
+export class SimulatorPageComponent extends AbstractSimulationPage {
 
   recipe$: Observable<Craft>;
 
@@ -24,10 +24,10 @@ export class SimulatorPageComponent extends SeoPageComponent {
 
   thresholds$: Observable<number[]>;
 
-  constructor(private route: ActivatedRoute, private dataService: DataService,
+  constructor(protected route: ActivatedRoute, private dataService: DataService,
               private rotationsFacade: RotationsFacade, private router: Router,
-              protected seo: SeoService) {
-    super(seo);
+              protected seo: SeoService, private lazyData: LazyDataService) {
+    super(route, seo);
     this.route.paramMap.pipe(
       map(params => params.get('rotationId'))
     ).subscribe(id => {
@@ -57,8 +57,8 @@ export class SimulatorPageComponent extends SeoPageComponent {
             return item.satisfaction[0].rating.map(r => r * 10);
           } else if (item.masterpiece !== undefined) {
             return item.masterpiece.rating.map(r => r * 10);
-          } else if (hwdSupplies[item.id] !== undefined) {
-            const supply = hwdSupplies[item.id];
+          } else if (this.lazyData.data.collectables[item.id] !== undefined) {
+            const supply = this.lazyData.data.collectables[item.id];
             return [
               supply.base.rating * 10,
               supply.mid.rating * 10,
@@ -73,12 +73,12 @@ export class SimulatorPageComponent extends SeoPageComponent {
     this.recipe$ = this.route.paramMap.pipe(
       switchMap(params => {
         return this.item$.pipe(
-          map(item => {
+          switchMap(item => {
             if (params.get('recipeId') === null && item.craft.length > 0) {
               this.router.navigate([item.craft[0].id], { relativeTo: this.route });
-              return item.craft.find(c => c.id.toString() === params.get('recipeId'));
+              return this.lazyData.getRecipe(params.get('recipeId'));
             }
-            return item.craft.find(c => c.id.toString() === params.get('recipeId')) || item.craft[0];
+            return this.lazyData.getRecipe(params.get('recipeId'));
           })
         );
       }),

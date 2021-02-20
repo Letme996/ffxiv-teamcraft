@@ -31,7 +31,7 @@ export class LayoutEditorRowComponent implements OnInit {
 
   tagInput$ = new BehaviorSubject<string>('');
 
-  availableTags$ = combineLatest(this.tagInput$, this.authFacade.user$).pipe(
+  availableTags$ = combineLatest([this.tagInput$, this.authFacade.user$]).pipe(
     map(([input, user]) => {
       return _.uniq(user.itemTags
         .filter(entry => entry.tag.toLowerCase().indexOf(input.toLowerCase()) > -1)
@@ -83,13 +83,17 @@ export class LayoutEditorRowComponent implements OnInit {
     if (this.row.reverseTiers) {
       return 'reverseTiers';
     }
+    if (this.row.npcBreakdown) {
+      return 'npcBreakdown';
+    }
     return 'default';
   }
 
-  setLayoutType(type: 'tiers' | 'zoneBreakdown' | 'reverseTiers'): void {
+  setLayoutType(type: 'tiers' | 'zoneBreakdown' | 'reverseTiers' | 'npcBreakdown'): void {
     this.row.tiers = type === 'tiers';
     this.row.zoneBreakdown = type === 'zoneBreakdown';
     this.row.reverseTiers = type === 'reverseTiers';
+    this.row.npcBreakdown = type === 'npcBreakdown';
     this.rowChange.emit(this.row);
   }
 

@@ -1,13 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { MarketboardItem } from '@xivapi/angular-client/src/model/schema/market/marketboard-item';
-import { combineLatest, Observable } from 'rxjs';
-import { buffer, bufferCount, debounceTime, distinctUntilChanged, filter, first, map, shareReplay, switchMap } from 'rxjs/operators';
+import { MarketboardItem } from './market/marketboard-item';
+import { combineLatest, Observable, of } from 'rxjs';
+import { bufferCount, catchError, distinctUntilChanged, filter, first, map, shareReplay, switchMap } from 'rxjs/operators';
 import { LazyDataService } from '../data/lazy-data.service';
 import { AuthFacade } from '../../+state/auth.facade';
 import { IpcService } from '../electron/ipc.service';
 import { SettingsService } from '../../modules/settings/settings.service';
 import * as _ from 'lodash';
+import { MarketBoardItemListing, MarketBoardItemListingHistory, MarketBoardSearchResult, MarketTaxRates, PlayerSetup } from '../../model/pcap';
 
 @Injectable({ providedIn: 'root' })
 export class UniversalisService {
@@ -19,10 +20,10 @@ export class UniversalisService {
     shareReplay(1)
   );
 
-  private worldId$: Observable<number> = this.ipc.worldId$.pipe(
-    filter(worldId => worldId !== undefined),
-    distinctUntilChanged(),
-    shareReplay(1)
+  private worldId$: Observable<number> = this.authFacade.user$.pipe(
+    map(user => user.world),
+    filter(world => world !== undefined),
+    distinctUntilChanged()
   );
 
   constructor(private http: HttpClient, private lazyData: LazyDataService, private authFacade: AuthFacade,
@@ -32,6 +33,7 @@ export class UniversalisService {
   public getDCPrices(dc: string, ...itemIds: number[]): Observable<MarketboardItem[]> {
     return this.http.get<any>(`https://universalis.app/api/${dc}/${itemIds.join(',')}`)
       .pipe(
+        catchError(() => of([])),
         map(response => {
           const data = response.items || [response];
           return data.map(res => {
@@ -39,12 +41,13 @@ export class UniversalisService {
               ID: res.worldID,
               ItemId: res.itemID,
               History: [],
-              Prices: []
+              Prices: [],
+              Updated: res.lastUploadTime
             };
             item.Prices = res.listings.map(listing => {
               return {
                 Server: listing.worldName,
-                PricePerUnit: listing.pricePerUnit,
+                PricePerUnit: Math.ceil(listing.pricePerUnit / 1.05),
                 PriceTotal: listing.total,
                 IsHQ: listing.hq,
                 Quantity: listing.quantity
@@ -53,7 +56,7 @@ export class UniversalisService {
             item.History = res.recentHistory.map(listing => {
               return {
                 Server: listing.worldName,
-                PricePerUnit: listing.pricePerUnit,
+                PricePerUnit: Math.ceil(listing.pricePerUnit / 1.05),
                 PriceTotal: listing.total,
                 IsHQ: listing.hq,
                 Quantity: listing.quantity,
@@ -75,6 +78,7 @@ export class UniversalisService {
     return combineLatest(chunks.map(chunk => {
       return this.http.get<any>(`https://universalis.app/api/${dc}/${chunk.join(',')}`)
         .pipe(
+          catchError(() => of([])),
           map(response => {
             const data = response.items || [response];
             return data.map(res => {
@@ -130,7 +134,7 @@ export class UniversalisService {
     this.ipc.marketboardListingCount$
       .pipe(
         switchMap(packet => {
-          return this.ipc.marketboardListing$.pipe(bufferCount(Math.ceil(packet.quantity / 10)))
+          return this.ipc.marketboardListing$.pipe(bufferCount(Math.ceil(packet.quantity / 10)));
         })
       )
       .subscribe(listings => {
@@ -148,14 +152,14 @@ export class UniversalisService {
         this.uploadMarketTaxRates(packet);
       }
     });
-    this.ipc.cid$.subscribe(packet => {
+    this.ipc.playerSetupPackets$.subscribe(packet => {
       if (this.settings.enableUniversalisSourcing) {
         this.uploadCid(packet);
       }
     });
   }
 
-  public handleMarketboardSearchResult(packet: any): void {
+  public handleMarketboardSearchResult(packet: MarketBoardSearchResult): void {
     combineLatest([this.cid$, this.worldId$]).pipe(
       first(),
       switchMap(([cid, worldId]) => {
@@ -178,7 +182,7 @@ export class UniversalisService {
     ).subscribe();
   }
 
-  public handleMarketboardListingPackets(packets: any[]): void {
+  public handleMarketboardListingPackets(packets: MarketBoardItemListing[]): void {
     combineLatest([this.cid$, this.worldId$]).pipe(
       first(),
       switchMap(([cid, worldId]) => {
@@ -221,7 +225,7 @@ export class UniversalisService {
     ).subscribe();
   }
 
-  public handleMarketboardListingHistory(packet: any): void {
+  public handleMarketboardListingHistory(packet: MarketBoardItemListingHistory): void {
     combineLatest([this.cid$, this.worldId$]).pipe(
       first(),
       switchMap(([cid, worldId]) => {
@@ -247,30 +251,45 @@ export class UniversalisService {
     ).subscribe();
   }
 
-  public uploadMarketTaxRates(packet: any): void {
-      combineLatest([this.cid$, this.worldId$]).pipe(
-        first(),
-        switchMap(([cid, worldId]) => {
-          const data = {
-            worldID: worldId,
-            uploaderID: cid,
-            marketTaxRates: {
-                limsaLominsa: packet.limsaLominsa,
-                gridania: packet.gridania,
-                uldah: packet.uldah,
-                ishgard: packet.ishgard,
-                kugane: packet.kugane,
-                crystarium: packet.crystarium
-            }
-          };
-          return this.http.post('https://us-central1-ffxivteamcraft.cloudfunctions.net/universalis-publisher', data, {
-            headers: new HttpHeaders().append('Content-Type', 'application/json')
-          });
-        })
-      ).subscribe();
+  public uploadMarketTaxRates(packet: MarketTaxRates): void {
+    /**
+     * Doing some light client-side validation is less work than going
+     * around and versioning to block this packet. This isn't retroactive,
+     * but will hopefully reduce incidences of bad tax rate data getting
+     * through in the future.
+     */
+    if (packet.packetSize !== 72 ||
+        packet.limsaLominsa > 7 ||
+        packet.gridania > 7 ||
+        packet.uldah > 7 ||
+        packet.ishgard > 7 ||
+        packet.kugane > 7 ||
+        packet.crystarium > 7)
+      return;
+
+    combineLatest([this.cid$, this.worldId$]).pipe(
+      first(),
+      switchMap(([cid, worldId]) => {
+        const data = {
+          worldID: worldId,
+          uploaderID: cid,
+          marketTaxRates: {
+            limsaLominsa: packet.limsaLominsa,
+            gridania: packet.gridania,
+            uldah: packet.uldah,
+            ishgard: packet.ishgard,
+            kugane: packet.kugane,
+            crystarium: packet.crystarium
+          }
+        };
+        return this.http.post('https://us-central1-ffxivteamcraft.cloudfunctions.net/universalis-publisher', data, {
+          headers: new HttpHeaders().append('Content-Type', 'application/json')
+        });
+      })
+    ).subscribe();
   }
 
-  public uploadCid(packet: any): void {
+  public uploadCid(packet: PlayerSetup): void {
     const data = {
       contentID: packet.contentID,
       characterName: packet.name

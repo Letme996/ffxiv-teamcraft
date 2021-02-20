@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { combineLatest, Observable, of } from 'rxjs';
 import { MapData } from './map-data';
 import { Aetheryte } from '../../core/data/aetheryte';
-import { aetherytes } from '../../core/data/sources/aetherytes';
 import { Vector2 } from '../../core/tools/vector2';
 import { MathToolsService } from '../../core/tools/math-tools';
 import { NavigationStep } from './navigation-step';
@@ -17,6 +16,7 @@ import { aetherstream } from '../../core/data/sources/aetherstream';
 import { SettingsService } from '../settings/settings.service';
 import { LazyDataService } from '../../core/data/lazy-data.service';
 import { EorzeaFacade } from '../eorzea/+state/eorzea.facade';
+import { Vector3 } from '../../core/tools/vector3';
 
 @Injectable()
 export class MapService {
@@ -49,9 +49,10 @@ export class MapService {
     return this.cache[mapId];
   }
 
-  public getNearestAetheryte(mapData: MapData, coords: Vector2): Aetheryte {
-    let nearest = mapData.aetherytes[0];
-    for (const aetheryte of mapData.aetherytes.filter(ae => ae.type === 0)) {
+  public getNearestAetheryte(mapData: MapData, coords: Vector2 | Vector3): Aetheryte {
+    const aetherytes = this.getAetherytes(mapData.id, true);
+    let nearest = aetherytes[0];
+    for (const aetheryte of aetherytes) {
       if (this.mathService.distance(aetheryte, coords) < this.mathService.distance(nearest, coords)) {
         nearest = aetheryte;
       }
@@ -164,13 +165,15 @@ export class MapService {
     };
   }
 
-  private getAetherytes(id: number): Aetheryte[] {
+  private getAetherytes(id: number, excludeMinis = false): Aetheryte[] {
     // If it's dravanian forelandes, use Idyllshire id instead.
     if (id === 213) {
       id = 257;
     }
-    return aetherytes
-      .filter((aetheryte) => aetheryte.map === id)
+    return this.lazyData.data.aetherytes
+      .filter((aetheryte) => {
+        return aetheryte.map === id && (!excludeMinis || aetheryte.type === 0)
+      })
       .map((aetheryte: Aetheryte) => {
         aetheryte.aethernetCoords = aetherstream[id] || { x: 0, y: 0 };
         return aetheryte;

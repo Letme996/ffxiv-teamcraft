@@ -2,7 +2,7 @@
 <ng-template #mainTemplate>
   <div fxLayout="column" fxLayoutGap="10px">
     <div class="toolbar" fxLayout="row wrap" fxLayoutGap="5px">
-      <button (click)="createTeam()" [nzTitle]="'TEAMS.Create_team' | translate" nz-button nz-tooltip nzShape="circle"
+      <button (click)="createTeam()" [nzTooltipTitle]="'TEAMS.Create_team' | translate" nz-button nz-tooltip nzShape="circle"
               nzType="primary">
         <i nz-icon nzType="usergroup-add"></i>
       </button>
@@ -19,7 +19,7 @@
               </button>
               <div class="spacer"></div>
               <button (click)="$event.stopPropagation()" (nzOnConfirm)="deleteTeam(team)" *ngIf="team.leader === (userId$ | async)" [nzShape]="'circle'"
-                      [nzTitle]="'TEAMS.Delete_confirmation' | translate"
+                      [nzPopconfirmTitle]="'TEAMS.Delete_confirmation' | translate"
                       [nzType]="'danger'"
                       nz-button nz-popconfirm>
                 <i nz-icon nzType="delete"></i>
@@ -29,7 +29,7 @@
           <div *ngIf="(userId$ | async) === team.leader" fxLayout="column" fxLayoutGap="5px">
             <div class="team-settings" fxLayout="row" fxLayoutGap="10px">
               <button (nzOnConfirm)="clearHook(team)" *ngIf="team.webhook" nz-button
-                      nz-popconfirm nzType="danger">
+                      nz-popconfirm [nzPopconfirmTitle]="'Confirmation' | translate" nzType="danger">
                 {{'TEAMS.Disable_discord_updates' | translate}}
               </button>
               <button (click)="discordOauth(team)" *ngIf="team.webhook === undefined" nz-button nzType="primary">
@@ -42,7 +42,7 @@
                 <nz-option [nzLabel]="'de'" [nzValue]="'de'"></nz-option>
                 <nz-option [nzLabel]="'ja'" [nzValue]="'ja'"></nz-option>
                 <nz-option [nzLabel]="'pt'" [nzValue]="'pt'"></nz-option>
-                <nz-option [nzLabel]="'br'" [nzValue]="'es'"></nz-option>
+                <nz-option [nzLabel]="'br'" [nzValue]="'br'"></nz-option>
                 <nz-option [nzLabel]="'es'" [nzValue]="'es'"></nz-option>
                 <nz-option [nzLabel]="'ko'" [nzValue]="'ko'"></nz-option>
                 <nz-option [nzLabel]="'zh'" [nzValue]="'zh'"></nz-option>
@@ -69,7 +69,10 @@
                     <ng-template #inviteContent>
                       <div fxFlex="1 1 auto" fxLayout="row" fxLayoutAlign="center center" fxLayoutGap="5px">
                         <div class="invite-url">{{('/teams/invite/' + invite.$key) | tcLink}}</div>
-                        <button (cbOnSuccess)="success('TEAMS.Invite_link_copied')" [cbContent]="('/teams/invite/'+invite.$key) | tcLink" [nzTitle]="'COMMON.Copy_to_clipboard' | translate" ngxClipboard nz-button
+                        <button [clipboard]="('/teams/invite/'+invite.$key) | tcLink"
+                                [clipboardSuccessMessage]="'TEAMS.Invite_link_copied' | translate"
+                                [nzTooltipTitle]="'COMMON.Copy_to_clipboard' | translate"
+                                nz-button
                                 nz-tooltip
                                 nzShape="circle"
                                 nzSize="small">
@@ -79,7 +82,7 @@
                         <div>{{'TEAMS.Invite_expires' | translate}}: {{invite.expires === undefined ? ('Never' |
                           translate) : invite.expires | date:'short'}}
                         </div>
-                        <button (click)="$event.stopPropagation()" (nzOnConfirm)="deleteInvite(invite)" [nzShape]="'circle'" [nzTitle]="'Confirmation' | translate"
+                        <button (click)="$event.stopPropagation()" (nzOnConfirm)="deleteInvite(invite)" [nzShape]="'circle'" [nzPopconfirmTitle]="'Confirmation' | translate"
                                 [nzType]="'danger'" nz-button
                                 nz-popconfirm nzSize="small">
                           <i nz-icon nzType="delete"></i>
@@ -125,7 +128,7 @@
                     <ng-container *ngIf="(userId$ | async) as userId">
                       <div fxLayout="row" fxLayoutAlign="center center">
                         <button (click)="addOfficer(team, member)" *ngIf="userId === team.leader && !team.notFound && !team.isOfficer(member) && member !== team.leader"
-                                [nzShape]="'circle'" [nzTitle]="'TEAMS.Promote_officer' | translate"
+                                [nzShape]="'circle'" [nzTooltipTitle]="'TEAMS.Promote_officer' | translate"
                                 nz-button
                                 nz-tooltip
                                 nzSize="small">
@@ -134,7 +137,7 @@
                         <nz-divider *ngIf="userId === team.leader && !team.notFound && !team.isOfficer(member) && member !== team.leader"
                                     nzType="vertical"></nz-divider>
                         <button (nzOnConfirm)="removeMember(team, member)" *ngIf="userId === team.leader || userId === member" [nzShape]="'circle'"
-                                [nzTitle]="'Confirmation' | translate" [nzType]="'danger'" nz-button
+                                [nzPopconfirmTitle]="'Confirmation' | translate" [nzType]="'danger'" nz-button
                                 nz-popconfirm
                                 nzSize="small">
                           <i nz-icon nzType="delete"></i>

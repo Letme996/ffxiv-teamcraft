@@ -9,18 +9,16 @@ import { filter, map } from 'rxjs/operators';
   name: 'closestAetheryte'
 })
 export class ClosestAetherytePipe implements PipeTransform {
-
   constructor(private mapService: MapService) {
   }
 
-  transform(mapId: number, position: Vector2): Observable<Aetheryte> {
+  transform(mapId: number, position: Vector2): Observable<Aetheryte | never> {
     return this.mapService.getMapById(mapId).pipe(
-      filter(mapData => mapData !== undefined),
-      map(mapData => {
+      filter((mapData) => mapData !== undefined && !!position),
+      map((mapData) => {
         return this.mapService.getNearestAetheryte(mapData, position);
       }),
-      filter(res => res && res.nameid !== undefined)
+      filter((res) => res && res.nameid !== undefined)
     );
   }
-
 }

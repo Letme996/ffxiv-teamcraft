@@ -1,14 +1,19 @@
 <app-overlay-container uri="/list-panel-overlay">
   <div *ngIf="display$ | async as display; else noDisplay" class="state-container" fxLayout="column" fxLayoutGap="10px">
     <div fxLayout="row wrap" fxLayoutGap="5px">
-      <button *ngFor="let panel of display" nz-button class="panel-button"
+      <button *ngFor="let panel of display; trackBy: trackByPanel" nz-button class="panel-button"
               [nzType]="(selectedPanel$ | async) === panel.title ? 'primary' : 'default'"
               (click)="selectedPanel$.next(panel.title)">
         {{panel.title | translate}}
       </button>
     </div>
+    <div>
+      <label nz-checkbox [ngModel]="hideCompleted$ | async" (ngModelChange)="hideCompletedChange($event)">{{'Hide_completed' | translate}}</label>
+    </div>
     <div *ngIf="selectedPanelDisplay$ | async as panelDisplay; else noPanel">
-      <app-list-details-panel [displayRow]="panelDisplay" [overlay]="true" [finalItems]="(selectedPanel$ | async) === 'Items'"></app-list-details-panel>
+      <app-list-details-panel [displayRow]="panelDisplay"
+                              [overlay]="true"
+                              [finalItems]="(selectedPanel$ | async) === 'Items'"></app-list-details-panel>
     </div>
   </div>
   <ng-template #noDisplay>

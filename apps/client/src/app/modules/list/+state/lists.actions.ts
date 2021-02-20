@@ -5,6 +5,7 @@ import { ListRow } from '../model/list-row';
 export enum ListsActionTypes {
   LoadMyLists = '[Lists] Load My Lists',
   LoadTeamLists = '[Lists] Load Team Lists',
+  LoadArchivedLists = '[Lists] Load Archived Lists',
 
   LoadSharedLists = '[Lists] Load Shared Lists',
 
@@ -18,6 +19,7 @@ export enum ListsActionTypes {
   UpdateItem = '[Lists] Update Item',
 
   MyListsLoaded = '[Lists] My Lists Loaded',
+  ArchivedListsLoaded = '[Lists] Archived Lists Loaded',
   TeamListsLoaded = '[Lists] Team Lists Loaded',
   SharedListsLoaded = '[Lists] Shared Lists Loaded',
   ListDetailsLoaded = '[Lists] List Details Loaded',
@@ -25,8 +27,9 @@ export enum ListsActionTypes {
 
   CreateList = '[Lists] Create List',
   UpdateList = '[Lists] Update List',
+  PureUpdateList = '[Lists] Pure Update List',
   UpdateListAtomic = '[Lists] Update List Atomic',
-  UpdateListIndex = '[Lists] Update List Index',
+  UpdateListIndexes = '[Lists] Update List Indexes',
   DeleteList = '[Lists] Delete List',
   ConvertLists = '[Lists] Convert Lists',
   OfflineListsLoaded = '[Lists] Offline lists loaded',
@@ -36,10 +39,18 @@ export enum ListsActionTypes {
   ToggleCompletionNotification = '[Lists] Toggle completion notification',
   PinList = '[Lists] Pin list',
   UnPinList = '[Lists] Unpin list',
+  DeleteLists = '[Lists] Delete Lists',
 }
 
 export class LoadMyLists implements Action {
   readonly type = ListsActionTypes.LoadMyLists;
+}
+
+export class DeleteLists implements Action {
+  readonly type = ListsActionTypes.DeleteLists;
+
+  constructor(public readonly keys: string[]) {
+  }
 }
 
 export class LoadTeamLists implements Action {
@@ -47,6 +58,10 @@ export class LoadTeamLists implements Action {
 
   constructor(public readonly teamId: string) {
   }
+}
+
+export class LoadArchivedLists implements Action {
+  readonly type = ListsActionTypes.LoadArchivedLists;
 }
 
 export class TeamListsLoaded implements Action {
@@ -91,7 +106,7 @@ export class LoadListDetails implements Action {
 export class SelectList implements Action {
   readonly type = ListsActionTypes.SelectList;
 
-  constructor(public readonly key: string, public readonly autocomplete = false) {
+  constructor(public readonly key: string) {
   }
 }
 
@@ -115,6 +130,13 @@ export class UpdateItem implements Action {
 
 export class MyListsLoaded implements Action {
   readonly type = ListsActionTypes.MyListsLoaded;
+
+  constructor(public payload: List[], public readonly userId: string) {
+  }
+}
+
+export class ArchivedListsLoaded implements Action {
+  readonly type = ListsActionTypes.ArchivedListsLoaded;
 
   constructor(public payload: List[], public readonly userId: string) {
   }
@@ -162,17 +184,24 @@ export class UpdateList implements Action {
   }
 }
 
-export class UpdateListAtomic implements Action {
-  readonly type = ListsActionTypes.UpdateListAtomic;
+export class PureUpdateList implements Action {
+  readonly type = ListsActionTypes.PureUpdateList;
 
-  constructor(public readonly payload: List) {
+  constructor(public readonly $key: string, public readonly payload: Partial<List>) {
   }
 }
 
-export class UpdateListIndex implements Action {
-  readonly type = ListsActionTypes.UpdateListIndex;
+export class UpdateListAtomic implements Action {
+  readonly type = ListsActionTypes.UpdateListAtomic;
 
-  constructor(public readonly payload: List) {
+  constructor(public readonly payload: List, public readonly fromPacket = false) {
+  }
+}
+
+export class UpdateListIndexes implements Action {
+  readonly type = ListsActionTypes.UpdateListIndexes;
+
+  constructor(public readonly lists: List[]) {
   }
 }
 
@@ -211,7 +240,7 @@ export type ListsAction =
   | SelectList
   | SetItemDone
   | ListDetailsLoaded
-  | UpdateListIndex
+  | UpdateListIndexes
   | LoadSharedLists
   | SharedListsLoaded
   | UpdateItem
@@ -225,4 +254,7 @@ export type ListsAction =
   | ToggleCompletionNotification
   | UpdateListAtomic
   | PinList
-  | UnPinList;
+  | UnPinList
+  | LoadArchivedLists
+  | ArchivedListsLoaded
+  | PureUpdateList;

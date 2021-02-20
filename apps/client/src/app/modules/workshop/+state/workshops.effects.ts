@@ -6,10 +6,10 @@ import {
   LoadWorkshop,
   MyWorkshopsLoaded,
   RemoveListFromWorkshop,
+  SharedWorkshopsLoaded,
   UpdateWorkshop,
   WorkshopLoaded,
-  WorkshopsActionTypes,
-  SharedWorkshopsLoaded
+  WorkshopsActionTypes
 } from './workshops.actions';
 import { catchError, debounceTime, distinctUntilChanged, filter, map, switchMap, withLatestFrom } from 'rxjs/operators';
 import { AuthFacade } from '../../../+state/auth.facade';
@@ -65,19 +65,19 @@ export class WorkshopsEffects {
     switchMap((action: LoadWorkshop) => {
       return this.authFacade.loggedIn$.pipe(
         switchMap(loggedIn => {
-          return combineLatest(
+          return combineLatest([
             of(action.key),
             loggedIn ? this.authFacade.user$ : of(null),
             this.authFacade.userId$,
             loggedIn ? this.authFacade.mainCharacter$.pipe(map(c => c.FreeCompanyId)) : of(null),
             this.workshopService.get(action.key).pipe(catchError(() => of(null)))
-          );
+          ]);
         })
       );
     }),
     distinctUntilChanged(),
     map(([WorkshopKey, user, userId, fcId, workshop]: [string, TeamcraftUser | null, string, string | null, Workshop]) => {
-      if(user !== null){
+      if (user !== null) {
         const idEntry = user.lodestoneIds.find(l => l.id === user.defaultLodestoneId);
         const verified = idEntry && idEntry.verified;
         if (!verified) {

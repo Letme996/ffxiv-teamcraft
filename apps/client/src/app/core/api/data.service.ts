@@ -2,12 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
-import { GarlandToolsService } from './garland-tools.service';
 import { Recipe } from '../../model/search/recipe';
 import { ItemData } from '../../model/garland-tools/item-data';
 import { NgSerializerService } from '@kaiu/ng-serializer';
 import { SearchFilter } from '../../model/search/search-filter.interface';
-import { map, switchMap } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
 import { SearchResult } from '../../model/search/search-result';
 import { LazyDataService } from '../data/lazy-data.service';
 import { InstanceData } from '../../model/garland-tools/instance-data';
@@ -16,7 +15,7 @@ import { NpcData } from '../../model/garland-tools/npc-data';
 import { LeveData } from '../../model/garland-tools/leve-data';
 import { MobData } from '../../model/garland-tools/mob-data';
 import { FateData } from '../../model/garland-tools/fate-data';
-import { SearchAlgo, SearchIndex, XivapiEndpoint, XivapiSearchFilter, XivapiSearchOptions, XivapiService } from '@xivapi/angular-client';
+import { SearchAlgo, SearchIndex, XivapiEndpoint, XivapiOptions, XivapiSearchFilter, XivapiSearchOptions, XivapiService } from '@xivapi/angular-client';
 import { SearchType } from '../../pages/search/search-type';
 import { InstanceSearchResult } from '../../model/search/instance-search-result';
 import { QuestSearchResult } from '../../model/search/quest-search-result';
@@ -32,6 +31,9 @@ import { LocalizedDataService } from '../data/localized-data.service';
 import { requestsWithDelay } from '../rxjs/requests-with-delay';
 import { FishingSpotSearchResult } from '../../model/search/fishing-spot-search-result';
 import { I18nToolsService } from '../tools/i18n-tools.service';
+import { SettingsService } from '../../modules/settings/settings.service';
+import { Region } from '../../modules/settings/region.enum';
+import { Language } from '../data/language';
 
 @Injectable()
 export class DataService {
@@ -48,14 +50,50 @@ export class DataService {
   };
   private garlandApiUrl = 'https://www.garlandtools.org/api';
 
+  public searchLang = this.translate.currentLang;
+
   constructor(private http: HttpClient,
               private i18n: I18nToolsService,
-              private gt: GarlandToolsService,
+              private settings: SettingsService,
               private xivapi: XivapiService,
               private serializer: NgSerializerService,
               private lazyData: LazyDataService,
               private translate: TranslateService,
               private l12n: LocalizedDataService) {
+  }
+
+  public setSearchLang(lang: Language): void {
+    this.searchLang = lang;
+  }
+
+  private get isCompatible() {
+    return this.searchLang === 'ko' || this.searchLang === 'zh' && this.settings.region !== Region.China;
+  }
+
+  private get baseUrl() {
+    if (this.settings.region === Region.China) {
+      return 'https://cafemaker.wakingsands.com';
+    }
+
+    return 'https://xivapi.com';
+  }
+
+  public xivapiSearch(options: XivapiSearchOptions, forcedLang?: string) {
+    const lang = forcedLang || this.getSearchLang();
+
+    const searchOptions: XivapiSearchOptions = Object.assign({}, options, {
+      language: lang
+    });
+
+    if (this.settings.region === Region.China) {
+      searchOptions.baseUrl = this.baseUrl;
+    }
+
+    if (!['chs', 'zh'].includes(lang)) {
+      searchOptions.string_algo = SearchAlgo.WILDCARD_PLUS;
+    }
+
+    return this.xivapi.search(searchOptions);
   }
 
   /**
@@ -134,17 +172,14 @@ export class DataService {
    * @param {SearchFilter[]} filters
    * @param onlyCraftable
    * @param sort
+   * @param ignoreLanguageSetting
    * @returns {Observable<Recipe[]>}
    */
-  public searchItem(query: string, filters: SearchFilter[], onlyCraftable: boolean, sort: [string, 'asc' | 'desc'] = [null, 'desc']): Observable<SearchResult[]> {
+  public searchItem(query: string, filters: SearchFilter[], onlyCraftable: boolean, sort: [string, 'asc' | 'desc'] = [null, 'desc'], ignoreLanguageSetting = false): Observable<SearchResult[]> {
+    const searchLang = ignoreLanguageSetting ? this.translate.currentLang : this.searchLang;
+    const isCompatibleLocal = searchLang === 'ko' || searchLang === 'zh' && this.settings.region !== Region.China;
     // Filter HQ and Collectable Symbols from search
-    query = query.replace(/[\ue03a-\ue03d]/g, '');
-
-    let lang = this.translate.currentLang;
-    const isKoOrZh = ['ko', 'zh'].indexOf(this.translate.currentLang.toLowerCase()) > -1 && query.length > 0;
-    if (isKoOrZh) {
-      lang = 'en';
-    }
+    query = query.replace(/[\ue03a-\ue03d]/g, '').toLowerCase();
 
     const xivapiFilters: XivapiSearchFilter[] = [].concat.apply([], filters
       .filter(f => {
@@ -152,18 +187,27 @@ export class DataService {
       })
       .map(f => {
         if (f.minMax) {
-          return [
-            {
-              column: f.name,
-              operator: '>=',
-              value: f.value.min
-            },
-            {
-              column: f.name,
-              operator: '<=',
-              value: f.value.max
-            }
-          ];
+          if (f.canExclude && f.value.min < 0) {
+            return [
+              {
+                column: f.name,
+                operator: '!!'
+              }
+            ];
+          } else {
+            return [
+              {
+                column: f.name,
+                operator: '>=',
+                value: f.value.min
+              },
+              {
+                column: f.name,
+                operator: '<=',
+                value: f.value.max
+              }
+            ];
+          }
         } else if (f.array) {
           return [
             {
@@ -180,22 +224,20 @@ export class DataService {
         }];
       }));
 
-    if (onlyCraftable && !isKoOrZh) {
+    if (onlyCraftable && !isCompatibleLocal) {
       xivapiFilters.push({
         column: 'Recipes.ClassJobID',
         operator: '>',
-        value: 0
+        value: 1
       });
     }
 
     const searchOptions: XivapiSearchOptions = {
       indexes: [SearchIndex.ITEM],
       string: query,
-      language: lang,
       filters: xivapiFilters,
-      columns: ['ID', 'Name_*', 'Icon', 'Recipes', 'GameContentLinks'],
-      string_algo: SearchAlgo.WILDCARD_PLUS,
-      limit: 250
+      exclude_dated: 1,
+      columns: ['ID', 'Name_*', 'Icon', 'Recipes', 'GameContentLinks']
     };
 
     if (sort[0]) {
@@ -203,49 +245,54 @@ export class DataService {
     }
     searchOptions.sort_order = sort[1];
 
-    let results$ = this.xivapi.search(searchOptions).pipe(
-      map((response) => {
-        return response.Results.filter(item => !item.Name_en.startsWith('Dated'));
+    let results$ = this.xivapiSearch(searchOptions, ignoreLanguageSetting ? this.translate.currentLang : null).pipe(
+      map(response => {
+        return response.Results;
       })
     );
 
-    if (isKoOrZh) {
-      results$ = this.xivapi.getList(
-        XivapiEndpoint.Item,
-        {
-          ids: this.mapToItemIds(query, this.translate.currentLang as 'ko' | 'zh'),
-          columns: ['ID', 'Name_*', 'Icon', 'Recipes', 'GameContentLinks']
-        }
-      ).pipe(
-        map(items => {
-          return items.Results.filter(item => {
-            const matchesRecipeFilter = onlyCraftable ? item.Recipes.length > 0 : true;
-            return matchesRecipeFilter && xivapiFilters.reduce((matches, filter) => {
-              switch (filter.operator) {
-                case '>=':
-                  return matches && item[filter.column] >= filter.value;
-                case '<=':
-                  return matches && item[filter.column] <= filter.value;
-                case '=':
-                  return matches && item[filter.column] === filter.value;
-                case '<':
-                  return matches && item[filter.column] < filter.value;
-                case '>':
-                  return matches && item[filter.column] > filter.value;
-              }
-            }, true);
-          });
-        })
-      );
+    if (isCompatibleLocal) {
+      const ids = this.mapToItemIds(query, searchLang as 'ko' | 'zh');
+      if (ids.length > 0) {
+        results$ = this.xivapi.getList(
+          XivapiEndpoint.Item,
+          {
+            ids: ids,
+            columns: ['ID', 'Name_*', 'Icon', 'Recipes', 'GameContentLinks']
+          }
+        ).pipe(
+          map(items => {
+            return items.Results.filter(item => {
+              if (!onlyCraftable) return true;
+
+              const matchesRecipeFilter = item.Recipes && item.Recipes.length > 0;
+              return matchesRecipeFilter && xivapiFilters.reduce((matches, f) => {
+                switch (f.operator) {
+                  case '>=':
+                    return matches && item[f.column] >= f.value;
+                  case '<=':
+                    return matches && item[f.column] <= f.value;
+                  case '=':
+                    return matches && item[f.column] === f.value;
+                  case '<':
+                    return matches && item[f.column] < f.value;
+                  case '>':
+                    return matches && item[f.column] > f.value;
+                }
+              }, true);
+            });
+          })
+        );
+      }
     }
 
+    const baseUrl = this.baseUrl;
     return results$.pipe(
       map(results => {
         if (onlyCraftable) {
           return results.filter(row => {
             return (row.Recipes && row.Recipes.length > 0)
-              || (row.GameContentLinks && row.GameContentLinks.CompanyCraftSequence && row.GameContentLinks.CompanyCraftSequence.ResultItem)
-              && !row.Name_en.startsWith('Dated');
+              || (row.GameContentLinks && row.GameContentLinks.CompanyCraftSequence && row.GameContentLinks.CompanyCraftSequence.ResultItem);
           });
         }
         return results;
@@ -255,11 +302,15 @@ export class DataService {
         xivapiSearchResults.forEach(item => {
           const recipes = this.lazyData.data.recipes.filter(recipe => recipe.result === item.ID);
           if (recipes.length > 0) {
+            const craftedByFilter = filters.find(f => f.name === 'Recipes.ClassJobID');
             recipes
+              .filter(recipe => {
+                return !craftedByFilter || craftedByFilter.value === recipe.job;
+              })
               .forEach(recipe => {
                 results.push({
                   itemId: item.ID,
-                  icon: `https://xivapi.com${item.Icon}`,
+                  icon: `${baseUrl}${item.Icon}`,
                   amount: 1,
                   recipe: {
                     recipeId: recipe.id.toString(),
@@ -267,15 +318,15 @@ export class DataService {
                     collectible: item.GameContentLinks && item.GameContentLinks.MasterpieceSupplyDuty,
                     job: recipe.job,
                     stars: recipe.stars,
-                    lvl: recipe.level,
-                    icon: `https://xivapi.com${item.Icon}`
+                    lvl: recipe.lvl,
+                    icon: `${baseUrl}${item.Icon}`
                   }
                 });
               });
           } else {
             results.push({
               itemId: item.ID,
-              icon: `https://xivapi.com${item.Icon}`,
+              icon: `${baseUrl}${item.Icon}`,
               amount: 1
             });
           }
@@ -359,18 +410,18 @@ export class DataService {
    * Will return an observable of empty array if name is shorter than 3 characters.
    *
    * @param {string} name
-   * @returns {Observable<ItemData[]>}
+   * @returns {Observable<number[]>}
    */
-  public searchGathering(name: string): Observable<any[]> {
-    let lang = this.translate.currentLang;
-    const isKoOrZh = ['ko', 'zh'].indexOf(this.translate.currentLang.toLowerCase()) > -1;
+  public searchGathering(name: string): Observable<number[]> {
+    let lang = this.searchLang;
+    const isKoOrZh = ['ko', 'zh'].indexOf(this.searchLang.toLowerCase()) > -1;
     if (isKoOrZh) {
       if (name.length > 0) {
         lang = 'en';
       } else {
         return of([]);
       }
-    } else if (name.length < 3 && (this.translate.currentLang !== 'ja' && name.length === 0)) {
+    } else if (name.length < 3 && (this.searchLang !== 'ja' && name.length === 0)) {
       return of([]);
     }
 
@@ -381,33 +432,15 @@ export class DataService {
 
     // If the lang is korean, handle it properly to map to item ids.
     if (isKoOrZh) {
-      const ids = this.mapToItemIds(name, this.translate.currentLang as 'ko' | 'zh');
-      params = params.set('ids', ids.join(','));
+      const ids = this.mapToItemIds(name, this.searchLang as 'ko' | 'zh');
+      params = ids.length > 0 ? params.set('ids', ids.join(',')) : params.set('text', name);
     } else {
       params = params.set('text', name);
     }
 
     return this.getGarlandSearch(params).pipe(
-      switchMap(results => {
-        const itemIds = (results || []).map(item => item.obj.i);
-        if (itemIds.length === 0) {
-          return of([]);
-        }
-        return this.getGarlandData(`/item/en/${this.garlandtoolsVersions.item}/${itemIds.join(',')}`)
-          .pipe(
-            map(items => {
-              if (!(items instanceof Array)) {
-                items = [{ obj: items }];
-              }
-              return items.map(itemData => {
-                const itemPartial = results.find(res => res.obj.i === itemData.obj.item.id);
-                return {
-                  ...itemPartial,
-                  nodes: itemData.obj.item.nodes
-                };
-              });
-            })
-          );
+      map(results => {
+        return (results || []).map(item => item.obj.i);
       })
     );
   }
@@ -442,10 +475,15 @@ export class DataService {
   }
 
   getSearchLang(): string {
-    let lang = this.translate.currentLang;
-    if (['fr', 'en', 'ja', 'de'].indexOf(lang) === -1) {
-      lang = 'en';
+    const lang = this.searchLang;
+    if (lang === 'zh' && !this.isCompatible) {
+      return 'chs';
+    } else if (lang === 'ko' && !this.isCompatible) {
+      return lang;
+    } else if (['fr', 'en', 'ja', 'de'].indexOf(lang) === -1) {
+      return 'en';
     }
+
     return lang;
   }
 
@@ -509,9 +547,7 @@ export class DataService {
   }
 
   searchInstance(query: string, filters: SearchFilter[]): Observable<InstanceSearchResult[]> {
-    return this.xivapi.search({
-      language: this.getSearchLang(),
-      string_algo: SearchAlgo.WILDCARD_PLUS,
+    return this.xivapiSearch({
       indexes: [SearchIndex.INSTANCECONTENT],
       columns: ['ID', 'Banner', 'Icon', 'ContentFinderCondition.ClassJobLevelRequired'],
       // I know, it looks like it's the same, but it isn't
@@ -555,9 +591,7 @@ export class DataService {
   }
 
   searchQuest(query: string, filters: SearchFilter[]): Observable<QuestSearchResult[]> {
-    return this.xivapi.search({
-      language: this.getSearchLang(),
-      string_algo: SearchAlgo.WILDCARD_PLUS,
+    return this.xivapiSearch({
       indexes: [SearchIndex.QUEST],
       columns: ['ID', 'Banner', 'Icon'],
       // I know, it looks like it's the same, but it isn't
@@ -600,9 +634,7 @@ export class DataService {
   }
 
   searchAction(query: string, filters: SearchFilter[]): Observable<ActionSearchResult[]> {
-    return this.xivapi.search({
-      language: this.getSearchLang(),
-      string_algo: SearchAlgo.WILDCARD_PLUS,
+    return this.xivapiSearch({
       indexes: [SearchIndex.ACTION, <SearchIndex>'craftaction'],
       columns: ['ID', 'Icon', 'ClassJobLevel', 'ClassJob', 'ClassJobCategory'],
       // I know, it looks like it's the same, but it isn't
@@ -646,9 +678,7 @@ export class DataService {
   }
 
   searchTrait(query: string, filters: SearchFilter[]): Observable<ActionSearchResult[]> {
-    return this.xivapi.search({
-      language: this.getSearchLang(),
-      string_algo: SearchAlgo.WILDCARD_PLUS,
+    return this.xivapiSearch({
       indexes: [<SearchIndex>'trait'],
       columns: ['ID', 'Icon', 'Level', 'ClassJob', 'ClassJobCategory'],
       // I know, it looks like it's the same, but it isn't
@@ -692,9 +722,7 @@ export class DataService {
   }
 
   searchStatus(query: string, filters: SearchFilter[]): Observable<StatusSearchResult[]> {
-    return this.xivapi.search({
-      language: this.getSearchLang(),
-      string_algo: SearchAlgo.WILDCARD_PLUS,
+    return this.xivapiSearch({
       indexes: [SearchIndex.STATUS],
       columns: ['ID', 'Icon', 'Name_*', 'Description_*'],
       // I know, it looks like it's the same, but it isn't
@@ -737,9 +765,7 @@ export class DataService {
   }
 
   searchAchievement(query: string, filters: SearchFilter[]): Observable<StatusSearchResult[]> {
-    return this.xivapi.search({
-      language: this.getSearchLang(),
-      string_algo: SearchAlgo.WILDCARD_PLUS,
+    return this.xivapiSearch({
       indexes: [SearchIndex.ACHIEVEMENT],
       columns: ['ID', 'Icon', 'Name_*', 'Description_*'],
       // I know, it looks like it's the same, but it isn't
@@ -782,9 +808,7 @@ export class DataService {
   }
 
   searchLeve(query: string, filters: SearchFilter[]): Observable<LeveSearchResult[]> {
-    return this.xivapi.search({
-      language: this.getSearchLang(),
-      string_algo: SearchAlgo.WILDCARD_PLUS,
+    return this.xivapiSearch({
       indexes: [SearchIndex.LEVE],
       columns: ['ID', 'Banner', 'Icon', 'ClassJobCategory', 'IconIssuer', 'ClassJobLevel'],
       // I know, it looks like it's the same, but it isn't
@@ -821,12 +845,7 @@ export class DataService {
             icon: leve.Icon,
             level: leve.ClassJobLevel,
             banner: leve.IconIssuer,
-            job: {
-              en: leve.ClassJobCategory.Name_en,
-              de: leve.ClassJobCategory.Name_de,
-              ja: leve.ClassJobCategory.Name_ja,
-              fr: leve.ClassJobCategory.Name_fr
-            }
+            job: this.l12n.xivapiToI18n(leve.ClassJobCategory, 'jobCategories')
           };
         });
       })
@@ -834,9 +853,7 @@ export class DataService {
   }
 
   searchNpc(query: string, filters: SearchFilter[]): Observable<NpcSearchResult[]> {
-    return this.xivapi.search({
-      language: this.getSearchLang(),
-      string_algo: SearchAlgo.WILDCARD_PLUS,
+    return this.xivapiSearch({
       indexes: [SearchIndex.ENPCRESIDENT],
       columns: ['ID', 'Title_*', 'Icon'],
       // I know, it looks like it's the same, but it isn't
@@ -871,12 +888,7 @@ export class DataService {
           return {
             id: npc.ID,
             icon: npc.Icon,
-            title: {
-              en: npc.Title_en,
-              de: npc.Title_de,
-              ja: npc.Title_ja,
-              fr: npc.Title_fr
-            }
+            title: this.l12n.xivapiToI18n(npc, 'npcTitles', 'Title')
           };
         });
       })
@@ -884,9 +896,7 @@ export class DataService {
   }
 
   searchMob(query: string, filters: SearchFilter[]): Observable<MobSearchResult[]> {
-    return this.xivapi.search({
-      language: this.getSearchLang(),
-      string_algo: SearchAlgo.WILDCARD_PLUS,
+    return this.xivapiSearch({
       indexes: [SearchIndex.BNPCNAME],
       columns: ['ID', 'Icon'],
       // I know, it looks like it's the same, but it isn't
@@ -929,9 +939,7 @@ export class DataService {
   }
 
   searchFate(query: string, filters: SearchFilter[]): Observable<FateSearchResult[]> {
-    return this.xivapi.search({
-      language: this.getSearchLang(),
-      string_algo: SearchAlgo.WILDCARD_PLUS,
+    return this.xivapiSearch({
       indexes: [SearchIndex.FATE],
       columns: ['ID', 'IconMap', 'ClassJobLevel'],
       // I know, it looks like it's the same, but it isn't
@@ -989,9 +997,7 @@ export class DataService {
   }
 
   searchMap(query: string, filters: SearchFilter[]): Observable<MapSearchResult[]> {
-    return this.xivapi.search({
-      language: this.getSearchLang(),
-      string_algo: SearchAlgo.WILDCARD_PLUS,
+    return this.xivapiSearch({
       indexes: [SearchIndex.PLACENAME],
       columns: ['ID', 'Name_*'],
       // I know, it looks like it's the same, but it isn't
@@ -1037,7 +1043,12 @@ export class DataService {
   }
 
   searchLore(query: string, filters: SearchFilter[]): Observable<any[]> {
-    return this.xivapi.searchLore(query, this.getSearchLang(), true, ['Icon', 'Name_*', 'Banner']).pipe(
+    const options: XivapiOptions = {};
+    if (this.settings.region === Region.China) {
+      options.baseUrl = this.baseUrl;
+    }
+
+    return this.xivapi.searchLore(query, this.getSearchLang(), true, ['Icon', 'Name_*', 'Banner'], 1, options).pipe(
       map(searchResult => {
         return searchResult.Results.map(row => {
           switch (row.Source.toLowerCase()) {
@@ -1047,12 +1058,8 @@ export class DataService {
               break;
             case 'quest': {
               const quest = this.l12n.getQuest(row.SourceID);
+              Object.assign(row.Data, this.l12n.i18nToXivapi(quest.name));
               row.Data.Icon = quest.icon;
-              row.Data.Name_en = quest.name.en;
-              row.Data.Name_ja = quest.name.ja;
-              row.Data.Name_de = quest.name.de;
-              row.Data.Name_fr = quest.name.fr;
-              row.Data.Name_ko = quest.name.ko || quest.name.en;
               row.Data.showButton = true;
               break;
             }
@@ -1066,11 +1073,7 @@ export class DataService {
               row.SourceID = +npcId;
               row.Data.Icon = '/c/ENpcResident.png';
               const npcEntry = this.l12n.getNpc(+npcId);
-              row.Data.Name_en = npcEntry.en;
-              row.Data.Name_ja = npcEntry.ja;
-              row.Data.Name_de = npcEntry.de;
-              row.Data.Name_fr = npcEntry.fr;
-              row.Data.Name_ko = npcEntry.ko || npcEntry.en;
+              Object.assign(row.Data, this.l12n.i18nToXivapi(npcEntry));
               row.Data.showButton = true;
               break;
             }
@@ -1084,11 +1087,7 @@ export class DataService {
               row.SourceID = +npcId;
               row.Data.Icon = '/c/ENpcResident.png';
               const npcEntry = this.l12n.getNpc(+npcId);
-              row.Data.Name_en = npcEntry.en;
-              row.Data.Name_ja = npcEntry.ja;
-              row.Data.Name_de = npcEntry.de;
-              row.Data.Name_fr = npcEntry.fr;
-              row.Data.Name_ko = npcEntry.ko || npcEntry.en;
+              Object.assign(row.Data, this.l12n.i18nToXivapi(npcEntry));
               row.Data.showButton = true;
               break;
             }
@@ -1099,14 +1098,10 @@ export class DataService {
                 break;
               }
               const instanceEntry = this.l12n.getInstanceName(+instanceId);
+              Object.assign(row.Data, this.l12n.i18nToXivapi(instanceEntry));
               row.Source = 'instance';
               row.SourceID = +instanceId;
               row.Data.Icon = instanceEntry.icon;
-              row.Data.Name_en = instanceEntry.en;
-              row.Data.Name_ja = instanceEntry.ja;
-              row.Data.Name_de = instanceEntry.de;
-              row.Data.Name_fr = instanceEntry.fr;
-              row.Data.Name_ko = instanceEntry.ko || instanceEntry.en;
               row.Data.showButton = true;
               break;
             }

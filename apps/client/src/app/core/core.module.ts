@@ -6,13 +6,12 @@ import { NgSerializerModule } from '@kaiu/ng-serializer';
 import { I18nPipe } from './i18n.pipe';
 import { TranslateModule } from '@ngx-translate/core';
 import { LocalizedDataService } from './data/localized-data.service';
-import { PushNotificationsModule } from 'ng-push';
+import { PushNotificationsModule } from 'ng-push-ivy';
 import { AbstractNotification } from './notification/abstract-notification';
 import { ListCommentNotification } from '../model/notification/list-comment-notification';
 import { PendingChangesService } from './database/pending-changes/pending-changes.service';
 import { PlatformService } from './tools/platform.service';
 import { MathToolsService } from './tools/math-tools';
-import { I18nToolsService } from './tools/i18n-tools.service';
 import { EorzeanTimeService } from './eorzea/eorzean-time.service';
 import { TimerPipe } from './eorzea/timer.pipe';
 import { HtmlToolsService } from './tools/html-tools.service';
@@ -21,7 +20,6 @@ import { AngularFireDatabaseModule } from '@angular/fire/database';
 import { AngularFireModule } from '@angular/fire';
 import { AngularFireAuthModule } from '@angular/fire/auth';
 import { LinkToolsService } from './tools/link-tools.service';
-import { CharacterService } from './api/character.service';
 import { DiscordWebhookService } from './discord/discord-webhook.service';
 import { ListItemCommentNotification } from '../model/notification/list-item-comment-notification';
 import { MaintenanceModule } from '../pages/maintenance/maintenance.module';
@@ -30,7 +28,6 @@ import { CustomLink } from './database/custom-links/custom-link';
 import { ListTemplate } from './database/custom-links/list-template';
 import { WeatherService } from './eorzea/weather.service';
 import { DbButtonComponent } from './db-button/db-button.component';
-import { NgZorroAntdModule } from 'ng-zorro-antd';
 import { RouterModule } from '@angular/router';
 import { ItemRarityDirective } from './item-rarity/item-rarity.directive';
 import { DbItemCommentNotification } from '../model/notification/db-item-comment-notification';
@@ -43,10 +40,26 @@ import { DevGuard } from './guard/dev.guard';
 import { DATA_REPORTERS } from './data-reporting/data-reporters-index';
 import { VersionLockModule } from '../pages/version-lock/version-lock.module';
 import { LazyComponentDirective } from './tools/lazy-component';
+import { TutorialModule } from './tutorial/tutorial.module';
+import { ModeratorGuard } from './guard/moderator.guard';
+import { MouseWheelDirective } from './event/mouse-wheel/mouse-wheel.directive';
+import { SupportUsPopupComponent } from './patreon/support-us-popup/support-us-popup.component';
+import { ClipboardDirective } from './clipboard.directive';
+import { ClipboardModule } from '@angular/cdk/clipboard';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { AngularFireFunctionsModule } from '@angular/fire/functions';
+import { CommissionNotification } from '../model/notification/commission-notification';
+import { NzModalModule } from 'ng-zorro-antd/modal';
+import { IpcPopupsModule } from '../modules/ipc-popups/ipc-popups.module';
+import { ItemNameClipboardDirective } from './item-name-clipboard.directive';
 
 
 @NgModule({
   imports: [
+    TranslateModule,
     HttpClientModule,
     NgSerializerModule.forChild([
       {
@@ -56,7 +69,8 @@ import { LazyComponentDirective } from './tools/lazy-component';
           LIST_ITEM_COMMENT: ListItemCommentNotification,
           DB_ITEM_COMMENT: DbItemCommentNotification,
           DB_COMMENT_REPLY: DbCommentReplyNotification,
-          BLOG_POST: BlogPostNotification
+          BLOG_POST: BlogPostNotification,
+          COMMISSION: CommissionNotification
         }
       },
       {
@@ -67,27 +81,35 @@ import { LazyComponentDirective } from './tools/lazy-component';
         }
       }
     ]),
-    TranslateModule,
     AngularFirestoreModule,
     AngularFireDatabaseModule,
+    AngularFireFunctionsModule,
     PushNotificationsModule,
     MaintenanceModule,
     VersionLockModule,
-    NgZorroAntdModule,
-    RouterModule
+    RouterModule,
+    TutorialModule,
+    ClipboardModule,
+    IpcPopupsModule,
+
+    NzButtonModule,
+    NzToolTipModule,
+    NzIconModule,
+    NzDividerModule,
+    NzModalModule
   ],
   providers: [
     PendingChangesService,
     PlatformService,
     DataService,
     MathToolsService,
-    I18nToolsService,
     HtmlToolsService,
     LinkToolsService,
     DiscordWebhookService,
     PatreonService,
     WeatherService,
     AdminGuard,
+    ModeratorGuard,
     DevGuard,
     ...DATA_REPORTERS,
     { provide: ErrorHandler, useClass: TeamcraftErrorHandler }
@@ -97,7 +119,11 @@ import { LazyComponentDirective } from './tools/lazy-component';
     TimerPipe,
     DbButtonComponent,
     ItemRarityDirective,
-    LazyComponentDirective
+    LazyComponentDirective,
+    MouseWheelDirective,
+    SupportUsPopupComponent,
+    ClipboardDirective,
+    ItemNameClipboardDirective
   ],
   exports: [
     I18nPipe,
@@ -110,17 +136,24 @@ import { LazyComponentDirective } from './tools/lazy-component';
     TimerPipe,
     DbButtonComponent,
     ItemRarityDirective,
-    LazyComponentDirective
+    LazyComponentDirective,
+    TutorialModule,
+    MouseWheelDirective,
+    ClipboardDirective,
+    ItemNameClipboardDirective,
+
+    NzButtonModule,
+    NzToolTipModule,
+    NzIconModule
   ]
 })
 export class CoreModule {
-  static forRoot(): ModuleWithProviders {
+  static forRoot(): ModuleWithProviders<CoreModule> {
     return {
       ngModule: CoreModule,
       providers: [
         GarlandToolsService,
         EorzeanTimeService,
-        CharacterService,
         LocalizedDataService,
         { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true }
       ]

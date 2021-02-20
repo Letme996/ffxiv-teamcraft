@@ -1,27 +1,18 @@
 import { Injectable } from '@angular/core';
 import { Actions, Effect, ofType } from '@ngrx/effects';
 import { AuthState } from './auth.reducer';
-import {
-  catchError,
-  debounceTime,
-  distinctUntilChanged,
-  exhaustMap,
-  filter,
-  map,
-  mergeMap,
-  switchMap,
-  tap,
-  withLatestFrom
-} from 'rxjs/operators';
+import { catchError, debounceTime, distinctUntilChanged, exhaustMap, filter, map, mergeMap, switchMap, switchMapTo, tap, withLatestFrom } from 'rxjs/operators';
 import { EMPTY, from, of } from 'rxjs';
 import { UserService } from '../core/database/user.service';
 import {
   AddCharacter,
   AuthActionTypes,
   Authenticated,
+  CommissionProfileLoaded,
   LinkingCharacter,
   LoggedInAsAnonymous,
   LoginAsAnonymous,
+  MarkAsDoneInLog,
   NoLinkedCharacter,
   RegisterUser,
   SetDefaultCharacter,
@@ -31,7 +22,8 @@ import {
 } from './auth.actions';
 import { Store } from '@ngrx/store';
 import { TeamcraftUser } from '../model/user/teamcraft-user';
-import { NzModalService, NzNotificationService } from 'ng-zorro-antd';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { TranslateService } from '@ngx-translate/core';
 import { XivapiService } from '@xivapi/angular-client';
 import { LoadAlarms } from '../core/alarms/+state/alarms.actions';
@@ -40,6 +32,12 @@ import { AngularFireAuth } from '@angular/fire/auth';
 import { AuthFacade } from './auth.facade';
 import { PatreonService } from '../core/patreon/patreon.service';
 import { diff } from 'deep-diff';
+import { LogTrackingService } from '../core/database/log-tracking.service';
+import { debounceBufferTime } from '../core/rxjs/debounce-buffer-time';
+import { CommissionProfile } from '../model/user/commission-profile';
+import { CommissionProfileService } from '../core/database/commission-profile.service';
+import { ApplyContentId, InventoryActionTypes } from '../modules/inventory/+state/inventory.actions';
+import { SettingsService } from '../modules/settings/settings.service';
 
 @Injectable()
 export class AuthEffects {
@@ -66,7 +64,7 @@ export class AuthEffects {
   @Effect()
   loginAsAnonymous$ = this.actions$.pipe(
     ofType(AuthActionTypes.LoginAsAnonymous, AuthActionTypes.Logout),
-    mergeMap(() => from(this.af.auth.signInAnonymously())),
+    mergeMap(() => from(this.af.signInAnonymously())),
     map((result: UserCredential) => new LoggedInAsAnonymous(result.user.uid))
   );
 
@@ -108,7 +106,8 @@ export class AuthEffects {
         return EMPTY;
       }
     }),
-    map(user => new UserFetched(user))
+    map(user => new UserFetched(user)),
+    debounceTime(250)
   );
 
   private nickNameWarningShown = false;
@@ -173,7 +172,8 @@ export class AuthEffects {
       AuthActionTypes.VerifyCharacter,
       AuthActionTypes.SaveDefaultConsumables,
       AuthActionTypes.SetCID,
-      AuthActionTypes.SetWorld
+      AuthActionTypes.SetWorld,
+      AuthActionTypes.SetContentId
     ),
     debounceTime(100),
     withLatestFrom(this.authFacade.user$),
@@ -181,8 +181,23 @@ export class AuthEffects {
   );
 
   @Effect()
+  selectContentId$ = this.actions$.pipe(
+    ofType<ApplyContentId>(InventoryActionTypes.ApplyContentId),
+    filter(() => this.settings.followIngameCharacterSwitches),
+    withLatestFrom(this.authFacade.user$),
+    map(([action, user]) => {
+      const newDefault = user.lodestoneIds.find(entry => entry.contentId === action.contentId);
+      if (newDefault) {
+        user.defaultLodestoneId = newDefault.id;
+      }
+      return new UpdateUser(user);
+    })
+  );
+
+  @Effect()
   updateUser$ = this.actions$.pipe(
     ofType<UpdateUser>(AuthActionTypes.UpdateUser),
+    debounceTime(2000),
     switchMap((action) => {
       return this.userService.set(action.user.$key, action.user);
     }),
@@ -204,10 +219,44 @@ export class AuthEffects {
     map(() => new LoadAlarms())
   );
 
+  @Effect({ dispatch: false })
+  markAsDoneInLog$ = this.actions$.pipe(
+    ofType<MarkAsDoneInLog>(AuthActionTypes.MarkAsDoneInLog),
+    debounceBufferTime(2000),
+    withLatestFrom(this.authFacade.user$),
+    filter(([, user]) => user.defaultLodestoneId !== undefined),
+    switchMap(([actions, user]) => {
+      return this.logTrackingService.markAsDone(`${user.$key}:${user.defaultLodestoneId.toString()}`, actions.map(action => {
+        return {
+          itemId: action.itemId,
+          log: action.log,
+          done: action.done
+        };
+      }));
+    })
+  );
+
+  @Effect()
+  fetchCommissionProfile$ = this.actions$.pipe(
+    ofType<LoggedInAsAnonymous | Authenticated>(AuthActionTypes.LoggedInAsAnonymous, AuthActionTypes.Authenticated),
+    switchMap(({ uid }) => {
+      return this.commissionProfileService.get(uid)
+        .pipe(
+          catchError(() => {
+            return this.commissionProfileService.set(uid, new CommissionProfile()).pipe(
+              switchMapTo(EMPTY)
+            );
+          })
+        );
+    }),
+    map(cProfile => new CommissionProfileLoaded(cProfile))
+  );
+
   constructor(private actions$: Actions, private af: AngularFireAuth, private userService: UserService,
               private store: Store<{ auth: AuthState }>, private dialog: NzModalService,
               private translate: TranslateService, private xivapi: XivapiService,
               private notificationService: NzNotificationService, private authFacade: AuthFacade,
-              private patreonService: PatreonService) {
+              private patreonService: PatreonService, private logTrackingService: LogTrackingService,
+              private commissionProfileService: CommissionProfileService, private settings: SettingsService) {
   }
 }

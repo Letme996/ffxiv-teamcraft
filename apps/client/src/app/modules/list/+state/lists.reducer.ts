@@ -2,6 +2,8 @@ import { ListsAction, ListsActionTypes } from './lists.actions';
 import { List } from '../model/list';
 
 
+const PINNED_LIST_LS_KEY = 'lists:pinned';
+
 export interface ListsState {
   listDetails: List[];
   selectedId?: string; // which Lists record has been selected
@@ -9,6 +11,7 @@ export interface ListsState {
   completionNotificationEnabled?: boolean;
   listsConnected: boolean;
   needsVerification: boolean;
+  connectedTeams: string[];
   deleted: string[];
   pinned: string;
 }
@@ -18,7 +21,8 @@ export const initialState: ListsState = {
   listsConnected: false,
   needsVerification: false,
   deleted: [],
-  pinned: 'none'
+  connectedTeams: [],
+  pinned: localStorage.getItem(PINNED_LIST_LS_KEY) || 'none'
 };
 
 export function listsReducer(
@@ -55,10 +59,21 @@ export function listsReducer(
       state = {
         ...state,
         listDetails: [
-          ...state.listDetails.filter(list => list.authorId !== action.userId || list.offline),
+          ...state.listDetails.filter(list => list.authorId !== action.userId || list.offline || list.archived),
           ...action.payload
         ],
         listsConnected: true
+      };
+      break;
+    }
+
+    case ListsActionTypes.ArchivedListsLoaded: {
+      state = {
+        ...state,
+        listDetails: [
+          ...state.listDetails.filter(list => list.authorId !== action.userId || !list.archived),
+          ...action.payload
+        ]
       };
       break;
     }
@@ -74,12 +89,23 @@ export function listsReducer(
       break;
     }
 
+    case ListsActionTypes.LoadTeamLists: {
+      state = {
+        ...state
+      };
+      break;
+    }
+
     case ListsActionTypes.TeamListsLoaded: {
       state = {
         ...state,
         listDetails: [
           ...state.listDetails.filter(list => list.teamId !== action.teamId),
           ...action.payload
+        ],
+        connectedTeams: [
+          ...state.connectedTeams,
+          action.teamId
         ]
       };
       break;
@@ -129,16 +155,6 @@ export function listsReducer(
       break;
     }
 
-    case ListsActionTypes.UpdateListIndex: {
-      state = {
-        ...state,
-        listDetails: [
-          ...state.listDetails.map(list => list.$key === action.payload.$key ? action.payload : list)
-        ]
-      };
-      break;
-    }
-
     case ListsActionTypes.DeleteList: {
       state = {
         ...state,
@@ -153,8 +169,7 @@ export function listsReducer(
     case ListsActionTypes.SelectList: {
       state = {
         ...state,
-        selectedId: action.key,
-        autocompletionEnabled: action.autocomplete
+        selectedId: action.key
       };
       break;
     }
@@ -164,6 +179,7 @@ export function listsReducer(
         ...state,
         pinned: action.uid
       };
+      localStorage.setItem(PINNED_LIST_LS_KEY, action.uid);
       break;
     }
 
@@ -172,6 +188,7 @@ export function listsReducer(
         ...state,
         pinned: 'none'
       };
+      localStorage.setItem(PINNED_LIST_LS_KEY, 'none');
       break;
     }
   }

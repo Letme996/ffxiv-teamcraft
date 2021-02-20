@@ -4,7 +4,8 @@ import { Observable } from 'rxjs';
 import { LayoutsFacade } from '../../../core/layout/+state/layouts.facade';
 import { LayoutRow } from '../../../core/layout/layout-row';
 import { LayoutRowOrder } from '../../../core/layout/layout-row-order.enum';
-import { NzMessageService, NzModalService } from 'ng-zorro-antd';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { TranslateService } from '@ngx-translate/core';
 import { TextQuestionPopupComponent } from '../../text-question-popup/text-question-popup/text-question-popup.component';
 import { filter } from 'rxjs/operators';
@@ -61,10 +62,6 @@ export class LayoutEditorComponent {
         const layoutContent = JSON.parse(unescape(atob(data)));
         this.layoutsFacade.createNewLayout('Imported layout', this.serializer.deserialize<ListLayout>(layoutContent, ListLayout));
       });
-  }
-
-  layoutCopied(): void {
-    this.message.success(this.translate.instant('LIST_DETAILS.LAYOUT_DIALOG.Import_string_copied'));
   }
 
   getItemsLayoutType(layout: ListLayout): string {

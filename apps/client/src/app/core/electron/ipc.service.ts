@@ -1,12 +1,19 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { PlatformService } from '../tools/platform.service';
 import { IpcRenderer, IpcRendererEvent } from 'electron';
 import { Router } from '@angular/router';
 import { Vector2 } from '../tools/vector2';
-import { Observable, ReplaySubject, Subject, Subscription } from 'rxjs';
-import { debounceTime, map } from 'rxjs/operators';
+import { BehaviorSubject, interval, Observable, ReplaySubject, Subject, Subscription } from 'rxjs';
+import { bufferCount, debounce, debounceTime, distinctUntilChanged, first, map, shareReplay, switchMap } from 'rxjs/operators';
 import { ofPacketType } from '../rxjs/of-packet-type';
 import { Store } from '@ngrx/store';
+import * as pcap from '../../model/pcap';
+import { PlayerSpawn } from '../../model/pcap';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { TranslateService } from '@ngx-translate/core';
+import { RawsockAdminErrorPopupComponent } from '../../modules/ipc-popups/rawsock-admin-error-popup/rawsock-admin-error-popup.component';
+import { NpcapInstallPopupComponent } from '../../modules/ipc-popups/npcap-install-popup/npcap-install-popup.component';
+import { ofPacketSubType } from '../rxjs/of-packet-subtype';
 
 type EventCallback = (event: IpcRendererEvent, ...args: any[]) => void;
 
@@ -19,69 +26,113 @@ export class IpcService {
 
   private readonly _ipc: IpcRenderer | undefined = undefined;
 
-  public get itemInfoPackets$(): Observable<any> {
+  private totalPacketsHandled = 0;
+
+  private start = Date.now();
+
+  public get ready(): boolean {
+    return this._ipc !== undefined;
+  }
+
+  public get itemInfoPackets$(): Observable<pcap.ItemInfo> {
     return this.packets$.pipe(ofPacketType('itemInfo'));
   }
 
-  public get updateInventorySlotPackets$(): Observable<any> {
+  public get updateInventorySlotPackets$(): Observable<pcap.UpdateInventorySlot> {
     return this.packets$.pipe(ofPacketType('updateInventorySlot'));
   }
 
-  public get cid$(): Observable<any> {
+  public get inventoryTransactionPackets$(): Observable<pcap.InventoryTransaction> {
+    return this.packets$.pipe(ofPacketType('inventoryTransaction'));
+  }
+
+  public get playerSetupPackets$(): Observable<pcap.PlayerSetup> {
     return this.packets$.pipe(ofPacketType('playerSetup'));
   }
 
-  public get worldId$(): Observable<any> {
-    return this.packets$.pipe(ofPacketType('playerSpawn'), map(packet => packet.currentWorldId));
+  public get worldId$(): Observable<number> {
+    return this.packets$.pipe(ofPacketType<PlayerSpawn>('playerSpawn'), map(packet => packet.currentWorldId));
   }
 
-  public get marketTaxRatePackets$(): Observable<any> {
-    return this.packets$.pipe(ofPacketType('marketTaxRates'));
+  public get marketTaxRatePackets$(): Observable<pcap.MarketTaxRates> {
+    return this.packets$.pipe(ofPacketSubType('marketTaxRates'));
   }
 
-  public get marketBoardSearchResult$(): Observable<any> {
+  public get marketBoardSearchResult$(): Observable<pcap.MarketBoardSearchResult> {
     return this.packets$.pipe(ofPacketType('marketBoardSearchResult'));
   }
 
-  public get marketboardListingCount$(): Observable<any> {
+  public get marketboardListingCount$(): Observable<pcap.MarketBoardItemListingCount> {
     return this.packets$.pipe(ofPacketType('marketBoardItemListingCount'));
   }
 
-  public get marketboardListing$(): Observable<any> {
+  public get marketboardListing$(): Observable<pcap.MarketBoardItemListing> {
     return this.packets$.pipe(ofPacketType('marketBoardItemListing'));
   }
 
-  public get marketboardListingHistory$(): Observable<any> {
+  public get marketboardListingHistory$(): Observable<pcap.MarketBoardItemListingHistory> {
     return this.packets$.pipe(ofPacketType('marketBoardItemListingHistory'));
   }
 
-  public get inventoryModifyHandlerPackets$(): Observable<any> {
+  public get inventoryModifyHandlerPackets$(): Observable<pcap.InventoryModifyHandler> {
     return this.packets$.pipe(ofPacketType('inventoryModifyHandler'));
   }
 
-  public get npcSpawnPackets$(): Observable<any> {
+  public get npcSpawnPackets$(): Observable<pcap.NpcSpawn> {
     return this.packets$.pipe(ofPacketType('npcSpawn'));
   }
 
-  public get playerStatsPackets$(): Observable<any> {
+  public get objectSpawnPackets$(): Observable<pcap.ObjectSpawn> {
+    return this.packets$.pipe(ofPacketType('objectSpawn'));
+  }
+
+  public get retainerInformationPackets$(): Observable<pcap.RetainerInformation> {
+    return this.packets$.pipe(ofPacketType('retainerInformation'));
+  }
+
+  public get updatePositionHandlerPackets$(): Observable<pcap.UpdatePositionHandler> {
+    return this.packets$.pipe(ofPacketType('updatePositionHandler'));
+  }
+
+  public get updatePositionInstancePackets$(): Observable<pcap.UpdatePositionInstance> {
+    return this.packets$.pipe(ofPacketType('updatePositionInstance'));
+  }
+
+  public get initZonePackets$(): Observable<pcap.InitZone> {
+    return this.packets$.pipe(ofPacketType('initZone'));
+  }
+
+  public get playerStatsPackets$(): Observable<pcap.PlayerStats> {
     return this.packets$.pipe(ofPacketType('playerStats'));
   }
 
-  public get updateClassInfoPackets$(): Observable<any> {
+  public get updateClassInfoPackets$(): Observable<pcap.UpdateClassInfo> {
     return this.packets$.pipe(ofPacketType('updateClassInfo'));
   }
 
-  public get currencyCrystalInfoPackets$(): Observable<any> {
+  public get currencyCrystalInfoPackets$(): Observable<pcap.CurrencyCrystalInfo> {
     return this.packets$.pipe(ofPacketType('currencyCrystalInfo'));
   }
 
-  public get actorControlPackets$(): Observable<any> {
-    return this.packets$.pipe(ofPacketType('actorControl'));
+  public get prepareZoningPackets$(): Observable<pcap.PrepareZoning> {
+    return this.packets$.pipe(ofPacketType('prepareZoning'));
   }
 
-  public packets$: Subject<any> = new Subject<any>();
+  public get eventPlay4Packets$(): Observable<pcap.EventPlay4> {
+    return this.packets$.pipe(ofPacketType('eventPlay4'));
+  }
 
-  public machinaToggle: boolean;
+  public get eventPlay32Packets$(): Observable<pcap.EventPlay32> {
+    return this.packets$.pipe(ofPacketType('eventPlay32'));
+  }
+
+  public packets$: Subject<pcap.BasePacket> = new Subject<pcap.BasePacket>();
+
+  public get machinaToggle(): boolean {
+    return this.machinaToggle$.value;
+  }
+
+  public machinaToggle$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
 
   public fishingState$: ReplaySubject<any> = new ReplaySubject<any>();
 
@@ -89,8 +140,18 @@ export class IpcService {
 
   private stateSubscription: Subscription;
 
+  public possibleMissingFirewallRule$ = this.packets$.pipe(
+    bufferCount(100),
+    first(),
+    map(packets => {
+      return packets.every(packet => packet.operation === 'send');
+    }),
+    shareReplay(1)
+  );
+
   constructor(private platformService: PlatformService, private router: Router,
-              private store: Store<any>) {
+              private store: Store<any>, private zone: NgZone, private dialog: NzModalService,
+              private translate: TranslateService) {
     // Only load ipc if we're running inside electron
     if (platformService.isDesktop()) {
       if (window.require) {
@@ -115,28 +176,34 @@ export class IpcService {
 
   public set overlayUri(uri: string) {
     this._overlayUri = uri;
-    this.handleOverlayChange();
+    if (this.ready) {
+      this.handleOverlayChange();
+    }
   }
 
   public on(channel: string, cb: EventCallback): void {
-    if (this._ipc !== undefined) {
-      this._ipc.on(channel, cb);
+    if (this.ready) {
+      this._ipc.on(channel, (event, ...args) => {
+        this.zone.run(() => cb(event, ...args));
+      });
     }
   }
 
   public once(channel: string, cb: EventCallback): void {
-    if (this._ipc !== undefined) {
-      this._ipc.once(channel, cb);
+    if (this.ready) {
+      this._ipc.once(channel, (event, ...args) => {
+        this.zone.run(() => cb(event, ...args));
+      });
     }
   }
 
   public send(channel: string, data?: any): void {
-    if (this._ipc !== undefined) {
+    if (this.ready) {
       return this._ipc.send(channel, data);
     }
   }
 
-  public openOverlay(url: string, registrationUri: string, defaultDimensions?: Vector2): void {
+  public openOverlay(url: string, registrationUri: string = url, defaultDimensions?: Vector2): void {
     this.send('overlay', {
       url: url,
       registrationUri: registrationUri,
@@ -145,21 +212,73 @@ export class IpcService {
   }
 
   private connectListeners(): void {
-    this.send('app-ready', true);
+    (<any>window).packetsPerSecond = () => {
+      const durationSeconds = (Date.now() - this.start) / 1000;
+      console.log('Packets per second: ', Math.floor(this.totalPacketsHandled * 10 / durationSeconds) / 10);
+    };
     this.on('toggle-machina:value', (event, value) => {
-      this.machinaToggle = value;
+      this.machinaToggle$.next(value);
     });
     this.send('toggle-machina:get');
-    this.on('packet', (event, packet: any) => {
+    this.on('packet', (event, packet: pcap.BasePacket) => {
       this.handlePacket(packet);
     });
     this.on('navigate', (event, url: string) => {
       if (url.endsWith('/')) {
         url = url.substr(0, url.length - 1);
       }
+      console.log('NAVIGATE', url);
       this.router.navigate(url.split('/'));
     });
     this.on('fishing-state', (event, data) => this.fishingState$.next(data));
+    this.on('install-npcap-prompt', () => {
+      this.translate.get('PACKET_CAPTURE.Install_npcap')
+        .pipe(
+          first(),
+          switchMap(title => {
+            return this.dialog.create({
+              nzFooter: null,
+              nzTitle: title,
+              nzContent: NpcapInstallPopupComponent
+            }).afterClose;
+          })
+        )
+        .subscribe(res => {
+          switch (res) {
+            case 'install':
+              this.send('install-npcap', false);
+              break;
+            case 'disable':
+              this.send('toggle-machina', false);
+              this.machinaToggle$.next(false);
+              break;
+          }
+        });
+    });
+    this.on('rawsock-needs-admin', () => {
+      this.translate.get('PACKET_CAPTURE.Rawsock_needs_admin')
+        .pipe(
+          first(),
+          switchMap(title => {
+            return this.dialog.create({
+              nzFooter: null,
+              nzTitle: title,
+              nzContent: RawsockAdminErrorPopupComponent
+            }).afterClose;
+          })
+        )
+        .subscribe(res => {
+          switch (res) {
+            case 'winpcap':
+              this.send('rawsock', false);
+              break;
+            case 'disable':
+              this.send('toggle-machina', false);
+              this.machinaToggle$.next(false);
+              break;
+          }
+        });
+    });
     // If we don't get a ping for an entire minute, something is wrong.
     this.packets$.pipe(
       ofPacketType('ping'),
@@ -185,15 +304,21 @@ export class IpcService {
       this.send('app-state:get');
     } else {
       this._ipc.removeAllListeners('app-state');
-      this.stateSubscription = this.store.subscribe(state => {
-        this.send('app-state:set', state);
-      });
+      this.stateSubscription = this.store
+        .pipe(
+          debounce(() => interval(250)),
+          distinctUntilChanged()
+        )
+        .subscribe(state => {
+          this.send('app-state:set', JSON.parse(JSON.stringify(state)));
+        });
     }
   }
 
-  private handlePacket(packet: any): void {
+  private handlePacket(packet: pcap.BasePacket): void {
     // If we're inside an overlay, don't do anything with the packet, we don't care.
-    if (this._overlayUri === undefined) {
+    if (!this.overlayUri) {
+      this.totalPacketsHandled++;
       this.packets$.next(packet);
       const debugPackets = (<any>window).debugPackets;
       if (debugPackets === true || (typeof debugPackets === 'function' && debugPackets(packet))) {

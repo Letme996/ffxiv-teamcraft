@@ -1,9 +1,7 @@
-import { getItemSource, ListRow } from './list-row';
+import { getCraftByPriority, getItemSource, ListRow } from './list-row';
 import { CraftAddition } from './craft-addition';
-import { GarlandToolsService } from '../../../core/api/garland-tools.service';
 import * as semver from 'semver';
 import { ListTag } from './list-tag.enum';
-import { Craft } from '../../../model/garland-tools/craft';
 import { DataWithPermissions } from '../../../core/database/permissions/data-with-permissions';
 import { ModificationEntry } from './modification-entry';
 import { MathTools } from '../../../tools/math-tools';
@@ -11,17 +9,31 @@ import { environment } from '../../../../environments/environment';
 import { Team } from '../../../model/team/team';
 import { ForeignKey } from '../../../core/database/relational/foreign-key';
 import { CustomItem } from '../../custom-items/model/custom-item';
-import { ItemData } from '../../../model/garland-tools/item-data';
 import { BehaviorSubject, concat, EMPTY, Observable, of, Subject } from 'rxjs';
 import { bufferCount, debounceTime, expand, map, skip, skipUntil, switchMap, tap } from 'rxjs/operators';
 import { DataService } from '../../../core/api/data.service';
 import { Ingredient } from '../../../model/garland-tools/ingredient';
 import { ListManagerService } from '../list-manager.service';
 import { ListColor } from './list-color';
-import * as firebase from 'firebase/app';
+import firebase from 'firebase/app';
 import { DataType } from '../data/data-type';
+import { SettingsService } from '../../settings/settings.service';
+import { LazyData } from '../../../core/data/lazy-data';
+import { LazyDataService } from '../../../core/data/lazy-data.service';
+import { CraftedBy } from './crafted-by';
+import { TeamcraftGearsetStats } from '../../../model/user/teamcraft-gearset-stats';
 
 declare const gtag: Function;
+
+interface CraftAdditionParams {
+  _additions: CraftAddition[];
+  customItems: CustomItem[];
+  dataService: DataService;
+  listManager: ListManagerService;
+  lazyDataService: LazyDataService;
+  gearsets?: TeamcraftGearsetStats[];
+  recipeId?: string;
+}
 
 export class List extends DataWithPermissions {
   offline?: boolean;
@@ -30,6 +42,8 @@ export class List extends DataWithPermissions {
 
   // For ordering purpose, lower index means higher priority on ordering.
   index = -1;
+
+  hasCommission = false;
 
   finalItems: ListRow[] = [];
 
@@ -63,10 +77,17 @@ export class List extends DataWithPermissions {
 
   color: ListColor;
 
-  constructor() {
+  archived = false;
+
+  constructor(settings?: SettingsService) {
     super();
     if (!this.createdAt) {
       this.createdAt = firebase.firestore.Timestamp.fromDate(new Date());
+    }
+
+    if (settings) {
+      this.everyone = settings.defaultPermissionLevel;
+      this.disableHQSuggestions = settings.disableHQSuggestions;
     }
   }
 
@@ -75,13 +96,15 @@ export class List extends DataWithPermissions {
   }
 
   public isComplete(): boolean {
-    return this.finalItems.length > 0 && this.finalItems.filter(recipe => {
+    return this.finalItems.length > 0 && !this.finalItems.some(recipe => {
       return recipe.done < recipe.amount;
-    }).length === 0;
+    });
   }
 
   public clone(internal = false): List {
     const clone = new List();
+    clone.everyone = this.everyone;
+    clone.disableHQSuggestions = this.disableHQSuggestions;
     clone.name = this.name;
     clone.version = this.version || '1.0.0';
     clone.tags = this.tags;
@@ -132,7 +155,24 @@ export class List extends DataWithPermissions {
     (this.finalItems || []).filter(row => row.requires !== undefined && row.requires.length > 0).forEach(method);
   }
 
-  public addToFinalItems(data: ListRow): number {
+  public addToFinalItems(data: ListRow, lazyData: LazyData): number {
+    if (getItemSource(data, DataType.CRAFTED_BY).length === 0) {
+      (data.requires || []).forEach(row => {
+        let amount = row.amount * (data.amount_needed || data.amount);
+        if (row.batches) {
+          amount = Math.ceil(amount / row.batches) * row.batches;
+        }
+        this.add(this.items, {
+          id: row.id,
+          icon: lazyData.itemIcons[row.id],
+          amount: amount,
+          done: 0,
+          used: 0,
+          yield: 1,
+          usePrice: true
+        });
+      });
+    }
     return this.add(this.finalItems, data, true);
   }
 
@@ -180,6 +220,9 @@ export class List extends DataWithPermissions {
   }
 
   public requiredAsHQ(item: ListRow): number {
+    if (!item) {
+      return 0;
+    }
     const recipesNeedingItem = this.finalItems
       .filter(i => i.requires !== undefined)
       .filter(i => {
@@ -196,14 +239,14 @@ export class List extends DataWithPermissions {
     } else {
       let count = 0;
       recipesNeedingItem.forEach(recipe => {
-        count += recipe.requires.find(req => req.id === item.id).amount * recipe.amount;
+        count += Math.ceil(recipe.requires.find(req => req.id === item.id).amount * recipe.amount / recipe.yield);
       });
-      return count;
+      return Math.max(count, item.amount);
     }
   }
 
   public getItemById(id: number | string, excludeFinalItems: boolean = false, onlyFinalItems = false, recipeId?: string): ListRow {
-    let array = this.items;
+    let array = this.items.filter(i => !i.finalItem);
     if (!excludeFinalItems && !onlyFinalItems) {
       array = array.concat(this.finalItems);
     }
@@ -400,7 +443,7 @@ export class List extends DataWithPermissions {
     }
   }
 
-  public addCraft(_additions: CraftAddition[], gt: GarlandToolsService, customItems: CustomItem[], dataService: DataService, listManager: ListManagerService, recipeId?: string): Observable<List> {
+  public addCraft({ _additions, customItems, dataService, listManager, lazyDataService, recipeId, gearsets }: CraftAdditionParams): Observable<List> {
     const done$ = new Subject<void>();
     return of(_additions).pipe(
       expand(additions => {
@@ -410,10 +453,10 @@ export class List extends DataWithPermissions {
         }
         return concat(
           ...additions.map(addition => {
-            if (addition.data instanceof ItemData) {
-              return of(this.addNormalCraft(addition, gt, listManager, recipeId));
+            if (addition.data instanceof CustomItem) {
+              return this.addCustomCraft(addition, customItems, dataService, listManager, lazyDataService);
             } else {
-              return this.addCustomCraft(addition, gt, customItems, dataService, listManager);
+              return of(this.addNormalCraft(addition, listManager, lazyDataService, gearsets, recipeId));
             }
           })
         ).pipe(
@@ -429,37 +472,40 @@ export class List extends DataWithPermissions {
     );
   }
 
-  private addNormalCraft(addition: CraftAddition, gt: GarlandToolsService, listManager: ListManagerService, recipeId?: string): CraftAddition[] {
+  private addNormalCraft(addition: CraftAddition, listManager: ListManagerService, lazyDataService: LazyDataService, gearsets: TeamcraftGearsetStats[], recipeId?: string): CraftAddition[] {
     const nextIteration: CraftAddition[] = [];
-    let craft: Craft;
+    let craft: CraftedBy;
+    const crafts = getItemSource(addition.item, DataType.CRAFTED_BY);
     if (recipeId !== undefined) {
-      craft = addition.item.craft.find(c => c.id.toString() === recipeId.toString()) || addition.item.craft[0];
+      craft = crafts.find(c => c.id.toString() === recipeId.toString()) || crafts[0];
     } else {
-      craft = addition.item.craft[0];
+      craft = getCraftByPriority(crafts, gearsets);
     }
-    for (const element of craft.ingredients) {
+    const ingredients = craft ? lazyDataService.getRecipeSync(craft.id).ingredients : getItemSource(addition.item, DataType.REQUIREMENTS);
+    for (const element of ingredients) {
       // If this is a crystal
       if (element.id < 20 && element.id > 1) {
-        const crystal = gt.getCrystalDetails(+element.id);
         this.add(this.items, {
           id: +element.id,
-          icon: crystal.item.icon,
+          icon: lazyDataService.data.itemIcons[+element.id],
           amount: element.amount * addition.amount,
           done: 0,
           used: 0,
           yield: 1,
           usePrice: true
         });
-        listManager.addDetails(this, crystal);
+        listManager.addDetails(this);
       } else {
-        const elementDetails = (<ItemData>addition.data).getIngredient(+element.id);
-        if (elementDetails && elementDetails.isCraft()) {
-          const yields = elementDetails.craft[0].yield || 1;
+        const elementDetails = lazyDataService.getExtract(+element.id);
+        const craftedBy = getItemSource(elementDetails, DataType.CRAFTED_BY);
+        const craftToAdd = getCraftByPriority(craftedBy, gearsets);
+        if (elementDetails && getItemSource(elementDetails, DataType.CRAFTED_BY).length > 0) {
+          const yields = craftToAdd.yield || 1;
           const added = this.add(this.items, {
             id: elementDetails.id,
             icon: elementDetails.icon,
             amount: element.amount * addition.amount,
-            requires: elementDetails.craft[0].ingredients,
+            requires: lazyDataService.getRecipeSync(craftToAdd.id).ingredients,
             done: 0,
             used: 0,
             yield: yields,
@@ -467,40 +513,51 @@ export class List extends DataWithPermissions {
           });
           nextIteration.push({
             item: elementDetails,
-            data: addition.data,
             amount: added
           });
         } else {
-          if (elementDetails === undefined) {
-            const partial = (<ItemData>addition.data).getPartial(element.id.toString(), 'item');
-            this.add(this.items, {
-              id: partial.obj.i,
-              icon: partial.obj.c,
-              amount: element.amount * addition.amount,
-              done: 0,
-              used: 0,
-              yield: 1,
-              usePrice: true
-            });
-          } else {
-            this.add(this.items, {
-              id: elementDetails.id,
-              icon: elementDetails.icon,
-              amount: element.amount * addition.amount,
-              done: 0,
-              used: 0,
-              yield: 1,
-              usePrice: true
+          const rowToAdd: Partial<ListRow> = {
+            id: elementDetails.id,
+            icon: elementDetails.icon,
+            amount: element.amount * addition.amount,
+            done: 0,
+            used: 0,
+            yield: 1,
+            usePrice: true
+          };
+          // Handle possible additional requirements
+          const requirements = getItemSource(elementDetails, DataType.REQUIREMENTS);
+          if (requirements.length > 0) {
+            rowToAdd.requires = requirements;
+            const reqAmount = element.amount * addition.amount;
+            requirements.forEach(req => {
+              const reqDetails = lazyDataService.getExtract(+req.id);
+              const reqRecipeId = getItemSource(reqDetails, DataType.CRAFTED_BY)[0]?.id;
+              this.add(this.items, {
+                id: +req.id,
+                icon: lazyDataService.data.itemIcons[+req.id],
+                amount: Math.ceil(reqAmount / req.amount) * req.amount,
+                done: 0,
+                used: 0,
+                yield: 1,
+                usePrice: true,
+                requires: reqRecipeId ? lazyDataService.getRecipeSync(reqRecipeId).ingredients : getItemSource(reqDetails, DataType.REQUIREMENTS)
+              });
+              nextIteration.push({
+                item: lazyDataService.getExtract(+req.id),
+                amount: Math.ceil(reqAmount / req.amount) * req.amount
+              });
             });
           }
+          this.add(this.items, rowToAdd as ListRow);
         }
-        listManager.addDetails(this, <ItemData>addition.data);
+        listManager.addDetails(this);
       }
     }
     return nextIteration;
   }
 
-  private addCustomCraft(addition: CraftAddition, gt: GarlandToolsService, customItems: CustomItem[], dataService: DataService, listManager: ListManagerService): Observable<CraftAddition[]> {
+  private addCustomCraft(addition: CraftAddition, customItems: CustomItem[], dataService: DataService, listManager: ListManagerService, lazyDataService: LazyDataService): Observable<CraftAddition[]> {
     const item: CustomItem = addition.data as CustomItem;
     const nextIteration: CraftAddition[] = [];
     let index = 0;
@@ -508,17 +565,16 @@ export class List extends DataWithPermissions {
     return queue$.pipe(
       switchMap(element => {
         if (element.id < 20 && element.id > 1) {
-          const crystal = gt.getCrystalDetails(+element.id);
           this.add(this.items, {
             id: +element.id,
-            icon: crystal.item.icon,
+            icon: lazyDataService.data.itemIcons[+element.id],
             amount: element.amount * addition.amount,
             done: 0,
             used: 0,
             yield: 1,
             usePrice: true
           });
-          listManager.addDetails(this, crystal);
+          listManager.addDetails(this);
           return of(null);
         } else {
           if (element.custom) {
@@ -570,7 +626,7 @@ export class List extends DataWithPermissions {
                     usePrice: true
                   });
                 }
-                listManager.addDetails(this, elementItemData);
+                listManager.addDetails(this);
               })
             );
           }
@@ -639,7 +695,9 @@ export class List extends DataWithPermissions {
       const requirements = (craft.requires || []).filter(req => req.id === item.id || +req.id === item.id);
       if (requirements.length > 0) {
         requirements.forEach(requirement => {
-          count += craft.amount_needed * requirement.amount;
+          const amount = (craft.amount_needed || craft.amount) * requirement.amount;
+          const batches = requirement.batches || 1;
+          count += Math.ceil(amount / batches) * batches;
         });
       }
     });
@@ -651,6 +709,13 @@ export class List extends DataWithPermissions {
       this.createdAt = firebase.firestore.Timestamp.fromDate(new Date(this.createdAt));
     } else if (!(this.createdAt instanceof firebase.firestore.Timestamp)) {
       this.createdAt = new firebase.firestore.Timestamp((this.createdAt as any).seconds, (this.createdAt as any).nanoseconds);
+    }
+    // lmao nice hotfix
+    if (!this.name) {
+      console.log('List has no name', this.$key);
+    }
+    if ((<any>this.name)?.name) {
+      this.name = (<any>this.name).name;
     }
   }
 }

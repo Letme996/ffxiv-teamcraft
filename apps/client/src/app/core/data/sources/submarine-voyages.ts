@@ -323,38 +323,38 @@ export const submarineVoyages = [
   },
   {
     "id": 47,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "the Open Robe",
+    "de": "Lumpenkleidinsel (P)",
+    "ja": "P　擦り切れローブ島",
+    "fr": "Île de la robe fripée (P)"
   },
   {
     "id": 48,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "Nald'thal's Pipe",
+    "de": "Nald'thals Schlot (Q)",
+    "ja": "Q　ナルザルの煙管",
+    "fr": "Cheminée de Nald'thal (Q)"
   },
   {
     "id": 49,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "the Slipped Anchor",
+    "de": "Schliergrund (R)",
+    "ja": "R　走錨海域",
+    "fr": "Mer de Chasse-Ancre (R)"
   },
   {
     "id": 50,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "Glutton's Belly",
+    "de": "Hungriger Magen (S)",
+    "ja": "S　強欲の胃袋",
+    "fr": "Estomac goulu (S)"
   },
   {
     "id": 51,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "the Blue Hole",
+    "de": "Das Blaue Loch (T)",
+    "ja": "T　ブルーホール",
+    "fr": "Trou bleu (T)"
   },
   {
     "id": 52,
@@ -365,94 +365,94 @@ export const submarineVoyages = [
   },
   {
     "id": 53,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "the Isle of Sacrament",
+    "de": "Insel des Sakraments (A)",
+    "ja": "A　祭壇島",
+    "fr": "Île du Sacrement (A)"
   },
   {
     "id": 54,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "the Kraken's Tomb",
+    "de": "Grab des Kraken (B)",
+    "ja": "B　蛸壺入江",
+    "fr": "Tombe du Kraken (B)"
   },
   {
     "id": 55,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "Sea of Jade 1",
+    "de": "Jademeer 1 (C)",
+    "ja": "C　翠浪海01",
+    "fr": "Mer de Jade 1 (C)"
   },
   {
     "id": 56,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "Rogo-Tumu-Here's Haunt",
+    "de": "Revier des Rogo-Tumu-Here (D)",
+    "ja": "D　ロゴトゥムヘレの狩場",
+    "fr": "Chasse de Rogo-Tumu-Here (D)"
   },
   {
     "id": 57,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "the Stone Barbs",
+    "de": "Steinerne Dornen (E)",
+    "ja": "E　吸盤礁",
+    "fr": "Ventouse de pierre (E)"
   },
   {
     "id": 58,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "Rogo-Tumu-Here's Repose",
+    "de": "Schlafplatz des Rogo-Tumu-Here (F)",
+    "ja": "F　ロゴトゥムヘレの寝蔵",
+    "fr": "Repos de Rogo-Tumu-Here (F)"
   },
   {
     "id": 59,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "Tangaroa's Prow",
+    "de": "Tangaroas Angelhaken (G)",
+    "ja": "G　タナロアの釣針",
+    "fr": "Hameçon de Tangaroa (G)"
   },
   {
     "id": 60,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "Sea of Jade 2",
+    "de": "Jademeer 2 (H)",
+    "ja": "H　翠浪海02",
+    "fr": "Mer de Jade 2 (H)"
   },
   {
     "id": 61,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "the Blind Sound",
+    "de": "Blinder Meeresarm (I)",
+    "ja": "I　目隠し峡江",
+    "fr": "Fjord aveugle (I)"
   },
   {
     "id": 62,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "Sea of Jade 3",
+    "de": "Jademeer 3 (J)",
+    "ja": "J　翠浪海03",
+    "fr": "Mer de Jade 3 (J)"
   },
   {
     "id": 63,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "Moergynn's Forge",
+    "de": "Moergynns Schmiede (K)",
+    "ja": "K　ムールギンの鍛冶場",
+    "fr": "Forge de Moergynn (K)"
   },
   {
     "id": 64,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "Tangaroa's Beacon",
+    "de": "Tangaroas Boje (L)",
+    "ja": "L　タナロアの浮標",
+    "fr": "Fanal de Tangaroa (L)"
   },
   {
     "id": 65,
-    "en": "",
-    "de": "",
-    "ja": "",
-    "fr": ""
+    "en": "Sea of Jade 4",
+    "de": "Jademeer 4 (M)",
+    "ja": "M　翠浪海04",
+    "fr": "Mer de Jade 4 (M)"
   },
   {
     "id": 66,

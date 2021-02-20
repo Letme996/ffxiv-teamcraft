@@ -16,7 +16,8 @@ import { CustomLink } from '../../../core/database/custom-links/custom-link';
 import { TeamcraftUser } from '../../../model/user/teamcraft-user';
 import { NameQuestionPopupComponent } from '../../name-question-popup/name-question-popup/name-question-popup.component';
 import { TranslateService } from '@ngx-translate/core';
-import { NzMessageService, NzModalService } from 'ng-zorro-antd';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 
 @Injectable()
 export class CustomLinksFacade {
@@ -28,7 +29,7 @@ export class CustomLinksFacade {
     select(customLinksQuery.getSelectedCustomLink),
     filter(rotation => rotation !== undefined)
   );
-  myCustomLinks$ = combineLatest(this.allCustomLinks$, this.authFacade.userId$).pipe(
+  myCustomLinks$ = combineLatest([this.allCustomLinks$, this.authFacade.userId$]).pipe(
     map(([folders, userId]) => folders.filter(folder => folder.authorId === userId)),
     shareReplay(1)
   );

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AlarmDisplay } from '../../../core/alarms/alarm-display';
 import { AlarmBellService } from '../../../core/alarms/alarm-bell.service';
@@ -7,10 +7,11 @@ import { Alarm } from '../../../core/alarms/alarm';
 import { SettingsService } from '../../../modules/settings/settings.service';
 import { AlarmsPageDisplay } from '../../../core/alarms/alarms-page-display';
 import { AlarmGroup } from '../../../core/alarms/alarm-group';
-import { NzMessageService, NzModalService } from 'ng-zorro-antd';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { TranslateService } from '@ngx-translate/core';
 import { NameQuestionPopupComponent } from '../../../modules/name-question-popup/name-question-popup/name-question-popup.component';
-import { filter, first, map, switchMap } from 'rxjs/operators';
+import { filter, first, switchMap } from 'rxjs/operators';
 import { AlarmGroupDisplay } from '../../../core/alarms/alarm-group-display';
 import { TextQuestionPopupComponent } from '../../../modules/text-question-popup/text-question-popup/text-question-popup.component';
 import { AlarmsOptionsPopupComponent } from '../alarms-options-popup/alarms-options-popup.component';
@@ -22,11 +23,13 @@ import { CustomAlarmPopupComponent } from '../../../modules/custom-alarm-popup/c
 import { I18nName } from '../../../model/common/i18n-name';
 import { EorzeanTimeService } from '../../../core/eorzea/eorzean-time.service';
 import { FolderAdditionPickerComponent } from '../../../modules/folder-addition-picker/folder-addition-picker/folder-addition-picker.component';
+import { LinkToolsService } from '../../../core/tools/link-tools.service';
 
 @Component({
   selector: 'app-alarms-page',
   templateUrl: './alarms-page.component.html',
-  styleUrls: ['./alarms-page.component.less']
+  styleUrls: ['./alarms-page.component.less'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AlarmsPageComponent implements OnInit {
 
@@ -34,14 +37,14 @@ export class AlarmsPageComponent implements OnInit {
 
   public loaded$: Observable<boolean>;
 
-  public expanded = true;
+  public expanded = !this.settings.alarmPanelsCollapsedByDefault;
 
   constructor(private alarmBell: AlarmBellService, public alarmsFacade: AlarmsFacade,
               private _settings: SettingsService, private dialog: NzModalService,
               private translate: TranslateService, private l12n: LocalizedDataService,
               private i18n: I18nToolsService, private etime: EorzeanTimeService,
               private message: NzMessageService, private ipc: IpcService,
-              public platform: PlatformService) {
+              public platform: PlatformService, private linkService: LinkToolsService) {
   }
 
   public get settings(): SettingsService {
@@ -68,8 +71,13 @@ export class AlarmsPageComponent implements OnInit {
     this.alarmsFacade.updateGroup(group);
   }
 
-  setAlarmGroup(alarm: Alarm, groupKey: string | undefined): void {
+  setAlarmGroup(alarm: Alarm, groupKey: string): void {
     this.alarmsFacade.assignAlarmGroup(alarm, groupKey);
+  }
+
+  removeAlarmFromGroup(alarmKey: string, group: AlarmGroup): void {
+    group.alarms = group.alarms.filter(key => key !== alarmKey);
+    this.alarmsFacade.updateGroup(group);
   }
 
   addNote(alarm: Alarm): void {
@@ -91,6 +99,14 @@ export class AlarmsPageComponent implements OnInit {
       nzFooter: null,
       nzContent: CustomAlarmPopupComponent
     });
+  }
+
+  deleteAllAlarms(): void {
+    this.alarmsFacade.deleteAllAlarms();
+  }
+
+  regenerateAlarms(): void {
+    this.alarmsFacade.regenerateAlarms();
   }
 
   toggleCollapse(): void {
@@ -150,6 +166,10 @@ export class AlarmsPageComponent implements OnInit {
     });
   }
 
+  getGroupLink(key: string): string {
+    return this.linkService.getLink(`/alarm-group/${key}`);
+  }
+
   deleteGroup(group: AlarmGroup): void {
     this.alarmsFacade.deleteGroup(group.$key);
   }
@@ -159,7 +179,7 @@ export class AlarmsPageComponent implements OnInit {
     alarms.map(alarm => alarm.alarm).forEach(alarm => this.deleteAlarm(alarm));
   }
 
-  getIngameAlarmMacro(display: AlarmDisplay): string {
+  getIngameAlarmMacro = (display: AlarmDisplay) => {
     const rp: I18nName = {
       en: 'rp',
       de: 'wh',
@@ -168,45 +188,35 @@ export class AlarmsPageComponent implements OnInit {
       ko: '반복'
     };
     return `/alarm "${display.alarm.itemId ? this.i18n.getName(this.l12n.getItem(display.alarm.itemId)).slice(0, 10) : display.alarm.name.slice(0, 10)
-      }" et ${this.i18n.getName(rp)} ${display.nextSpawn.hours < 10 ? '0' : ''}${display.nextSpawn.hours}00 ${
+    }" et ${this.i18n.getName(rp)} ${display.nextSpawn.hours < 10 ? '0' : ''}${display.nextSpawn.hours}00 ${
       Math.ceil(this.etime.toEarthTime(this.settings.alarmHoursBefore * 60) / 60)}`;
-  }
+  };
 
   addAlarmsToGroup(group: AlarmGroup): void {
-    this.display$.pipe(
+    this.alarmsFacade.allAlarms$.pipe(
       first(),
-      switchMap((display: AlarmsPageDisplay) => {
+      switchMap((alarms: Alarm[]) => {
         return this.dialog.create({
           nzTitle: this.translate.instant('ALARMS.Add_alarms_to_group'),
           nzContent: FolderAdditionPickerComponent,
           nzComponentParams: {
-            elements: display.noGroup.map(row => {
+            elements: alarms.map(alarm => {
               return {
-                $key: row.alarm.$key,
-                name: this.i18n.getName(this.l12n.getItem(row.alarm.itemId)) || row.alarm.name
+                $key: alarm.$key,
+                name: alarm.itemId ? this.i18n.getName(this.l12n.getItem(alarm.itemId)) : alarm.name
               };
             })
           },
           nzFooter: null
         }).afterClose
           .pipe(
-            map(picked => {
-              return picked
-                .map(a => display.noGroup.find(row => row.alarm.$key === a.$key))
-                .map(displayRow => displayRow.alarm);
-            })
+            filter(picked => !!picked)
           );
       })
     ).subscribe(alarms => {
-      alarms.forEach(alarm => {
-        alarm.groupId = group.$key;
-        this.alarmsFacade.updateAlarm(alarm);
-      });
+      group.alarms.push(...alarms.map(a => a.$key));
+      this.alarmsFacade.updateGroup(group);
     });
-  }
-
-  macroCopied(): void {
-    this.message.success(this.translate.instant('ALARMS.Macro_copied'));
   }
 
   showSettings(): void {

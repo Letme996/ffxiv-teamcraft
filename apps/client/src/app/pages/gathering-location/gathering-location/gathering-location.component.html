@@ -23,128 +23,113 @@
   </div>
 </div>
 <div *ngIf="results$ | async as results; else noResults" class="results">
-  <div *ngFor="let node of results" [class.compact-node]="compactDisplay">
-    <nz-card [nzActions]="(node.timed || node.weathers?.length > 0)?
-             (alarmGroups$ | async)?.length > 0 && canCreateAlarm(alarms$ | async, node)?[actionAlarm, actionAlarmToGroup]:[actionAlarm]
+  <ng-container *ngFor="let row of results" [class.compact-node]="compactDisplay">
+    <nz-card [nzActions]="(row.node.spawns?.length > 0 || row.node.weathers?.length > 0)?
+             (alarmGroups$ | async)?.length > 0 && canCreateAlarmFromNode(alarms$ | async, row.node)?[actionAlarm, actionAlarmToGroup]:[actionAlarm]
              :[]"
              [nzCover]="compactDisplay?null:map">
       <nz-card-meta [nzAvatar]="itemIcon" [nzDescription]="description" [nzTitle]="title">
       </nz-card-meta>
       <ng-template #itemIcon>
-        <app-item-icon [icon]="node.icon" [itemId]="node.itemId"></app-item-icon>
+        <app-item-icon [itemId]="row.node.matchingItemId"></app-item-icon>
+        <!-- TODO add small item icon if it's reduction -->
       </ng-template>
     </nz-card>
     <ng-template #map>
-      <app-map [mapId]="node.mapId" [markers]="[{x: node.x, y: node.y}]"></app-map>
+      <app-map [mapId]="row.node.map"
+               [markers]="[{x: row.node.x, y: row.node.y, size: {x:0, y:0}, iconType: 'img', iconImg: row.node.type | nodeTypeIcon: (row.node.spawns || []).length > 0}]"></app-map>
     </ng-template>
 
     <ng-template #title>
       <div class="card-title">
         <div>
-          {{node.itemId | itemName | i18n}} <span
-          *ngIf="node.slot !== null && node.slot !== undefined">({{node.slot}})</span>
+          {{row.node.matchingItemId | itemName | i18n}}
         </div>
       </div>
     </ng-template>
     <ng-template #description>
-      <div fxLayout="row" fxLayoutAlign="space-between flex-start">
-        <div fxLayout="column">
-          <div>{{node.zoneid | placeName | i18n}}
-            <app-db-button [id]="node.nodeId" type="node"></app-db-button>
-          </div>
-          <div>X: {{node.x}}, Y: {{node.y}}</div>
-          <div>
-            {{getNodeSpawns(node)}} <i *ngIf="node.ephemeral" [nzTitle]="'GATHERING_LOCATIONS.Ephemeral_node' | translate" nz-icon nz-tooltip
-                                       nzType="clock-circle"></i>
-          </div>
-          <ng-container *ngIf="getNodeSpawns(node) !== ''">
-            <div *ngIf="(generateAlarm(node) | alarmDisplay | async) as alarm" [class.played-timer]="alarm.played"
-                 [class.spawned-timer]="alarm.spawned">
-              {{ (alarm.spawned ? 'GATHERING_LOCATIONS.Spawned_for' : 'GATHERING_LOCATIONS.Will_spawn_in') | translate : { timer: (alarm.remainingTime | timer) } }}
+      <div fxLayout="column">
+        <div fxLayout="row" fxLayoutAlign="space-between flex-start">
+          <app-node-details [node]="row.node"></app-node-details>
+          <div fxLayout="column" fxLayoutGap="5px" fxLayoutAlign="flex-start center">
+            <div fxLayout="row" fxLayoutAlign="flex-start center" fxLayoutGap="5px">
+              <img *ngIf="row.node.type !== undefined" alt="" class="node-type" src="{{row.node.type | nodeTypeIcon}}">
+              <img *ngIf="row.node.isReduction" [nzTooltipTitle]="'Reduction' | translate" class="reduction-icon"
+                   nz-tooltip src="https://www.garlandtools.org/db/images/Reduce.png">
+              <app-item-icon *ngIf="row.node.folklore !== undefined" [itemId]="row.node.folklore" [width]="32"></app-item-icon>
+              <img *ngIf="row.node.snagging" [nzTooltipTitle]="'GATHERING_LOCATIONS.Snagging' | translate" alt="" nz-tooltip
+                   src="./assets/icons/status/snagging.png">
             </div>
-          </ng-container>
-          <div fxLayout="row" fxLayoutAlign="center center" fxLayoutGap="5px">
-            <div *ngIf="node.weathersFrom !== undefined" fxLayout="row wrap" fxLayoutGap="5px">
-              <div *ngFor="let weather of node.weathersFrom">
-                <img [nzTitle]="weather | weatherName | i18n" [src]="weather | weatherIcon" alt="{{weather | weatherName | i18n}}"
-                     nz-tooltip>
-              </div>
-            </div>
-            <div *ngIf="node.weathersFrom !== undefined">
-              <i nz-icon nzType="right" theme="outline"></i>
-            </div>
-            <div *ngIf="node.weathers !== undefined" fxLayout="row wrap" fxLayoutGap="5px">
-              <div *ngFor="let weather of node.weathers">
-                <img [nzTitle]="weather | weatherName | i18n" [src]="weather | weatherIcon" alt="{{weather | weatherName | i18n}}"
-                     nz-tooltip>
+            <app-fishing-bait *ngIf="row.node.baits !== undefined" [baits]="row.node.baits"></app-fishing-bait>
+            <img *ngIf="row.node.gig" [nzTooltipTitle]="('GATHERING_LOCATIONS.GIG_HEAD.' + row.node.gig) | translate" class="gig-icon" nz-tooltip
+                 src="./assets/icons/gig/{{row.node.gig}}.png">
+            <img *ngIf="row.node.hookset" [nzTooltipTitle]="(row.node.hookset === 'precision'? 4179 : 4103) | actionName | i18n" class="gig-icon" nz-tooltip
+                 src="./assets/icons/hookset/{{row.node.hookset}}.png">
+            <div *ngIf="row.node.predators && row.node.predators.length > 0" fxLayout="row" fxLayoutAlign="flex-start center"
+                 fxLayoutGap="10px">
+              <img [nzTooltipTitle]="'GATHERING_LOCATIONS.Predators' | translate" alt="" nz-tooltip
+                   src="./assets/icons/status/predators.png">
+              <div *ngFor="let predator of row.node.predators" fxLayout="row" fxLayoutAlign="flex-start center"
+                   fxLayoutGap="5px">
+                <div>{{predator.amount}}x</div>
+                <app-item-icon [appFishTooltip]="predator.id" [itemId]="predator.id"
+                               [tooltipDisabled]="true" [width]="32"></app-item-icon>
               </div>
             </div>
           </div>
         </div>
-        <div fxLayout="column" fxLayoutGap="5px">
-          <div fxLayout="row" fxLayoutAlign="flex-start center" fxLayoutGap="5px">
-            <img *ngIf="node.type !== undefined" alt="" class="node-type" src="{{node.type | nodeTypeIcon}}">
-            <img *ngIf="node.reduction" [nzTitle]="'Reduction' | translate" class="reduction-icon"
-                 nz-tooltip src="https://www.garlandtools.org/db/images/Reduce.png">
-            <img *ngIf="node.folklore !== undefined" [nzTitle]="node.folklore.id | itemName | i18n" alt=""
-                 class="folklore" nz-tooltip src="{{node.folklore.icon | icon}}">
-            <i *ngIf="node.hidden">{{'GATHERING_LOCATIONS.Hidden_item' | translate}}</i>
-            <div *ngIf="node.fishEyes" fxLayout="row" fxLayoutAlign="flex-start center" fxLayoutGap="5px">
-              <img [nzTitle]="'GATHERING_LOCATIONS.Fish_eyes' | translate" alt="" nz-tooltip
-                   src="./assets/icons/status/fish_eyes.png">
-              <div
-                *ngIf="node.itemId | fishEyesDuration as duration" [nzTitle]="'GATHERING_LOCATIONS.Fish_eyes_duration' | translate"
-                nz-tooltip>{{'COMMON.Minutes_duration' | translate: { amount: duration } }}</div>
-            </div>
-            <img *ngIf="node.snagging" [nzTitle]="'GATHERING_LOCATIONS.Snagging' | translate" alt="" nz-tooltip
-                 src="./assets/icons/status/snagging.png">
-          </div>
-          <app-fishing-bait *ngIf="node.baits !== undefined" [baits]="node.baits"></app-fishing-bait>
-          <img *ngIf="node.gig" [nzTitle]="('GATHERING_LOCATIONS.GIG_HEAD.' + node.gig) | translate" class="gig-icon" nz-tooltip
-               src="./assets/icons/gig/{{node.gig}}.png">
-          <img *ngIf="node.hookset" [nzTitle]="(node.hookset === 'precision'? 4179 : 4103) | actionName | i18n" class="gig-icon" nz-tooltip
-               src="./assets/icons/hookset/{{node.hookset}}.png">
-          <div *ngIf="node.predators && node.predators.length > 0" fxLayout="row" fxLayoutAlign="flex-start center"
-               fxLayoutGap="10px">
-            <img [nzTitle]="'GATHERING_LOCATIONS.Predators' | translate" alt="" nz-tooltip
-                 src="./assets/icons/status/predators.png">
-            <div *ngFor="let predator of node.predators" fxLayout="row" fxLayoutAlign="flex-start center"
-                 fxLayoutGap="5px">
-              <div>{{predator.amount}}x</div>
-              <app-item-icon [appFishTooltip]="predator.id" [icon]="predator.icon" [itemId]="predator.id"
-                             [tooltipDisabled]="true" [width]="32"></app-item-icon>
-            </div>
-          </div>
-        </div>
+        <div fxFlex="1 1 auto"></div>
       </div>
+    </ng-template>
+    <ng-template #alarmCreated>
+      {{'ALARMS.Alarm_already_created' | translate}}
     </ng-template>
     <ng-template #actionAlarm>
-      <div *ngIf="canCreateAlarm(alarms$ | async, node); else alarmCreated">
-        <i (click)="addAlarm(node)" *ngIf="alarmsLoaded$ | async" class="material-icons create-alarm">
-          alarm_add
-        </i>
+      <div fxLayout="row" fxLayoutAlign="space-around center">
+        <div *ngFor="let alarm of row.alarms; trackBy: trackByAlarm">
+          <ng-container *ngIf="canCreateAlarm(alarms$ | async, alarm); else alarmCreated">
+            <ng-container *ngIf="alarmsLoaded$ | async">
+              <div nz-tooltip [nzTooltipTitle]="('GATHERING_LOCATIONS.Add_alarm' + (alarm.fishEyes?'_fish_eyes':'')) | translate" fxLayout="row"
+                   fxLayoutAlign="center center">
+                <i (click)="addAlarm(alarm)" class="material-icons create-alarm">
+                  alarm_add
+                </i>
+                <img [src]="762 | statusIcon | xivapiIcon" *ngIf="alarm.fishEyes" alt="" class="fish-eyes-alarm create-alarm">
+              </div>
+            </ng-container>
+          </ng-container>
+        </div>
       </div>
-      <ng-template #alarmCreated>
-        {{'ALARMS.Alarm_already_created' | translate}}
-      </ng-template>
     </ng-template>
     <ng-template #actionAlarmToGroup>
-      <ng-container *ngIf="alarmGroups$ | async as groups">
-        <i *ngIf="alarmsLoaded$ | async" [nzBackdrop]="false" [nzDropdownMenu]="menu" [nzPlacement]="'bottomCenter'" class="add-to-group"
-           nz-dropdown nz-icon
-           nzType="folder-open"
-        ></i>
-        <nz-dropdown-menu #menu="nzDropdownMenu">
-          <ul nz-menu>
-            <li (click)="addAlarm(node, group)" *ngFor="let group of groups" nz-menu-item>
-              {{group.name}}
-            </li>
-          </ul>
-        </nz-dropdown-menu>
-      </ng-container>
+      <div *ngIf="alarmGroups$ | async as groups" fxLayout="row" fxLayoutAlign="space-around center">
+        <ng-container *ngFor="let alarm of row.alarms; trackBy: trackByAlarm">
+          <ng-container *ngIf="canCreateAlarm(alarms$ | async, alarm); else alarmCreated">
+            <ng-container *ngIf="alarmsLoaded$ | async">
+              <i [nzDropdownMenu]="menu" [nzPlacement]="'bottomCenter'" class="add-to-group"
+                 nz-dropdown nz-icon
+                 nzType="folder-open"
+              ></i>
+              <img [src]="762 | statusIcon | xivapiIcon" *ngIf="alarm.fishEyes" alt="" class="fish-eyes-alarm create-alarm">
+              <nz-dropdown-menu #menu="nzDropdownMenu">
+                <ul nz-menu>
+                  <li (click)="addAlarm(alarm, group)" *ngFor="let group of groups" nz-menu-item>
+                    {{group.name}}
+                  </li>
+                </ul>
+              </nz-dropdown-menu>
+            </ng-container>
+          </ng-container>
+        </ng-container>
+      </div>
     </ng-template>
-  </div>
-  <app-fullpage-message *ngIf="results.length === 0">{{'No_items_found' | translate}}</app-fullpage-message>
+    <app-fullpage-message *ngIf="results.length === 0">{{'No_items_found' | translate}}</app-fullpage-message>
+  </ng-container>
+  <ng-container *ngIf="results.length === 0">
+    <app-fullpage-message fontSize="2rem">
+      {{'GATHERING_LOCATIONS.No_items' | translate}}
+    </app-fullpage-message>
+  </ng-container>
 </div>
 
 <ng-template #noResults>

@@ -9,14 +9,13 @@ import { I18nToolsService } from '../../../core/tools/i18n-tools.service';
 import { TranslateService } from '@ngx-translate/core';
 import { LazyDataService } from '../../../core/data/lazy-data.service';
 import { SeoService } from '../../../core/seo/seo.service';
-import { filter, map, shareReplay, switchMap } from 'rxjs/operators';
+import { filter, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import { SeoMetaConfig } from '../../../core/seo/seo-meta-config';
 import * as _ from 'lodash';
 import { MapRelatedElement } from './map-related-element';
 import { MapMarker } from '../../../modules/map/map-marker';
 import { HtmlToolsService } from '../../../core/tools/html-tools.service';
 import { HttpClient } from '@angular/common/http';
-import { tap } from 'rxjs/internal/operators/tap';
 import { SettingsService } from '../../../modules/settings/settings.service';
 
 @Component({
@@ -95,10 +94,10 @@ export class MapPageComponent extends TeamcraftPageComponent {
     this.related$ = this.map$.pipe(
       map(mapData => {
         return [
-          ...this.getFates(mapData.PlaceNameTargetID),
-          ...this.getMobs(mapData.PlaceNameTargetID),
-          ...this.getNpcs(mapData.PlaceNameTargetID),
-          ...this.getNodes(mapData.PlaceNameTargetID),
+          ...this.getFates(mapData.ID),
+          ...this.getMobs(mapData.ID),
+          ...this.getNpcs(mapData.ID),
+          ...this.getNodes(mapData.ID),
           ...this.getHunts(mapData.TerritoryTypeTargetID, mapData.SizeFactor)
         ];
       }),
@@ -191,7 +190,7 @@ export class MapPageComponent extends TeamcraftPageComponent {
 
   private getHunts(territoryId: number, sizeFactor: number): MapRelatedElement[] {
     const zoneHunts = this.lazyData.data.hunts.find(h => h.zoneid === territoryId);
-    if (zoneHunts === undefined) {
+    if (!zoneHunts || !zoneHunts.hunts) {
       return [];
     }
     const c = sizeFactor / 100;
@@ -220,13 +219,14 @@ export class MapPageComponent extends TeamcraftPageComponent {
     );
   }
 
-  private getFates(placeNameId: number): MapRelatedElement[] {
+  private getFates(mapId: number): MapRelatedElement[] {
     return Object.keys(this.lazyData.data.fates)
       .map(key => {
-        const position = this.lazyData.data.fates[key].position;
-        return position ? { ...this.lazyData.data.fates[key], id: +key } : null;
+        const fate = this.l12n.getFate(+key);
+        const position = fate.position;
+        return position ? { ...fate, id: +key } : null;
       })
-      .filter(fate => fate !== null && fate.position.zoneid === placeNameId)
+      .filter(fate => fate !== null && fate.position.map === mapId)
       .map(fate => {
         return <MapRelatedElement>{
           type: 'fate',
@@ -249,13 +249,14 @@ export class MapPageComponent extends TeamcraftPageComponent {
       });
   }
 
-  private getNpcs(placeNameId: number): MapRelatedElement[] {
+  private getNpcs(mapId: number): MapRelatedElement[] {
     return Object.keys(this.lazyData.data.npcs)
       .map(key => {
-        const position = this.lazyData.data.npcs[key].position;
-        return position ? { ...this.lazyData.data.npcs[key], id: +key } : null;
+        const npc = this.l12n.getNpc(+key);
+        const position = npc.position;
+        return position ? { ...npc, id: +key } : null;
       })
-      .filter(npc => npc !== null && npc.position.zoneid === placeNameId && npc.en !== '')
+      .filter(npc => npc !== null && npc.position.map === mapId && npc.en !== '')
       .map(npc => {
         return <MapRelatedElement>{
           type: 'npc',
@@ -277,12 +278,12 @@ export class MapPageComponent extends TeamcraftPageComponent {
       });
   }
 
-  private getNodes(placeNameId: number): MapRelatedElement[] {
-    const fromNodePositions = Object.keys(this.lazyData.data.nodePositions)
+  private getNodes(mapId: number): MapRelatedElement[] {
+    const fromNodePositions = Object.keys(this.lazyData.data.nodes)
       .map(key => {
-        return { ...this.lazyData.data.nodePositions[key], id: +key };
+        return { ...this.lazyData.data.nodes[key], id: +key };
       })
-      .filter(node => node !== null && node.zoneid === placeNameId && !node.items.some(i => i > 2000000))
+      .filter(node => node !== null && node.map === mapId && !node.items.some(i => i > 2000000))
       .map(node => {
         return <MapRelatedElement>{
           type: 'node',
@@ -310,7 +311,7 @@ export class MapPageComponent extends TeamcraftPageComponent {
       });
     const fromBell = (window as any).gt.bell.nodes
       .filter(node => {
-        return this.l12n.getAreaIdByENName(node.zone) === placeNameId;
+        return this.l12n.getMapId(node.zone) === mapId;
       })
       .map(node => {
         node.type = ['Rocky Outcropping', 'Mineral Deposit', 'Mature Tree', 'Lush Vegetation'].indexOf(node.type);

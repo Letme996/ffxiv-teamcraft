@@ -2,36 +2,14 @@
 @tablet: ~"screen and (min-width: 576px) and (max-width: 1025px)";
 
 :host ::ng-deep {
-  .progress-progressbar {
-    .ant-progress-bg {
-      background-color: green;
-    }
-
-    .ant-progress-status-success .ant-progress-bg {
-      background-color: #52c41a;
-    }
-  }
-
-  .progress-progressbar-failed {
-    .ant-progress-bg {
-      background-color: rgba(255, 0, 0, 0.7);
-    }
-  }
-
-  .cp-amount {
-    .ant-progress-bg {
-      background-color: #9254AD;
-    }
-  }
-
-  .ant-progress-status-success .ant-progress-text {
-    color: inherit;
-  }
-
   .ant-card-body {
     @media @mobile {
       padding: 12px;
     }
+  }
+
+  .ant-input-group {
+    width: auto;
   }
 }
 
@@ -58,29 +36,6 @@
   justify-content: flex-end;
 }
 
-.quality-bar {
-  position: relative;
-
-  .threshold-marker {
-    position: absolute;
-    height: 17px;
-
-    .marker {
-      background-color: var(--primary-color);
-      height: 100%;
-      width: 2px;
-      z-index: 1000;
-    }
-
-    .value {
-      font-size: .8em;
-      padding-left: 2px;
-      margin-top: -7px;
-      height: 10px;
-    }
-  }
-}
-
 .ingredients {
   button {
     margin-bottom: 37px;
@@ -93,11 +48,6 @@
 
 .success {
   background-color: rgba(0, 255, 0, .3);
-}
-
-.text-icon {
-  font-size: 0.8em;
-  line-height: 27px;
 }
 
 .nothing-selected {
@@ -119,16 +69,6 @@
 
 .job-icon {
   width: 32px;
-}
-
-.durability {
-  .durability-value {
-    font-size: 2rem;
-  }
-
-  .durability-value-failed {
-    color: rgba(255, 0, 0, .7);
-  }
 }
 
 .buttons {
@@ -207,13 +147,6 @@
   margin-right: 40px;
 }
 
-.report {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  height: 40px;
-}
-
 .actions-card {
   position: relative;
 
@@ -247,28 +180,41 @@
   }
 }
 
-.category-row {
-  display: flex;
-  flex-wrap: wrap;
+.actions-card-content {
 
-  h4 {
-    padding-left: 15px;
+  position: relative;
+
+  .detailed-toggle {
+    position: absolute;
+    top: 5px;
+    right: 5px;
   }
 
-  .actions-row {
+  .category-row {
     display: flex;
-    justify-content: flex-start;
     flex-wrap: wrap;
-    padding: 5px;
-    background: rgba(0, 0, 0, .3);
-    margin: 10px;
 
-    .gu-transit {
-      display: none;
+    h4 {
+      padding-left: 15px;
     }
 
-    app-action {
-      margin: 5px;
+    .actions-row {
+      padding: 5px;
+      background: rgba(0, 0, 0, .3);
+      margin: 10px;
+
+      app-action {
+        display: block;
+      }
+
+      .gu-transit {
+        display: none;
+      }
     }
   }
+}
+
+/* Animate items as they're being sorted. */
+.cdk-drop-list-dragging .cdk-drag {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }

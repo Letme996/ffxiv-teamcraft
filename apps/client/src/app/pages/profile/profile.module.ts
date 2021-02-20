@@ -2,8 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Routes } from '@angular/router';
 import { PublicProfileComponent } from './public-profile/public-profile.component';
-import { NgZorroAntdModule } from 'ng-zorro-antd';
-import { ClipboardModule } from 'ngx-clipboard';
+
 import { ListModule } from '../../modules/list/list.module';
 import { CoreModule } from '../../core/core.module';
 import { PipesModule } from '../../pipes/pipes.module';
@@ -21,6 +20,13 @@ import { MaintenanceGuard } from '../maintenance/maintenance.guard';
 import { VersionLockGuard } from '../version-lock/version-lock.guard';
 import { SimulatorModule } from '../simulator/simulator.module';
 import { AutofillStatsPopupComponent } from './profile-editor/autofill-stats-popup/autofill-stats-popup.component';
+import { ItemIconModule } from '../../modules/item-icon/item-icon.module';
+import { ScrollingModule } from '@angular/cdk/scrolling';
+import { AntdSharedModule } from '../../core/antd-shared.module';
+import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
+import { CommissionBoardModule } from '../../modules/commission-board/commission-board.module';
+import { NzSliderModule } from 'ng-zorro-antd/slider';
+import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 
 const routes: Routes = [
   {
@@ -40,8 +46,8 @@ const routes: Routes = [
     CommonModule,
     FormsModule,
     TranslateModule,
-    NgZorroAntdModule,
-    ClipboardModule,
+    AntdSharedModule,
+
     PipesModule,
     CoreModule,
     ListModule,
@@ -51,10 +57,15 @@ const routes: Routes = [
     UserAvatarModule,
 
     RouterModule.forChild(routes),
-    SimulatorModule
+    SimulatorModule,
+    ItemIconModule,
+    ScrollingModule,
+    CommissionBoardModule,
+    NzSkeletonModule,
+    NzSliderModule,
+    NzAvatarModule
   ],
-  declarations: [PublicProfileComponent, ProfileEditorComponent, MasterbooksPopupComponent, StatsPopupComponent, VerificationPopupComponent, AutofillStatsPopupComponent],
-  entryComponents: [MasterbooksPopupComponent, StatsPopupComponent, VerificationPopupComponent, AutofillStatsPopupComponent]
+  declarations: [PublicProfileComponent, ProfileEditorComponent, MasterbooksPopupComponent, StatsPopupComponent, VerificationPopupComponent, AutofillStatsPopupComponent]
 })
 export class ProfileModule {
 }

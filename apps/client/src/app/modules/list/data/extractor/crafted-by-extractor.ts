@@ -30,14 +30,15 @@ export class CraftedByExtractor extends AbstractExtractor<CraftedBy[]> {
       const craftedBy: CraftedBy = {
         itemId: item.id,
         icon: `./assets/icons/classjob/${this.gt.getJob(craft.job).name.toLowerCase()}.png`,
-        jobId: craft.job,
-        level: craft.lvl,
-        stars_tooltip: this.htmlTools.generateStars(craft.stars),
-        recipeId: craft.id,
+        job: craft.job,
+        lvl: craft.lvl,
+        stars_tooltip: craft.stars > 0 ? `(${craft.stars}★)` : '',
+        id: craft.id,
         rlvl: craft.rlvl,
         durability: craft.durability,
         progression: craft.progress,
-        quality: craft.quality
+        quality: craft.quality,
+        yield: craft.yield
       };
       if (craft.job === 0) {
         craftedBy.icon = '';

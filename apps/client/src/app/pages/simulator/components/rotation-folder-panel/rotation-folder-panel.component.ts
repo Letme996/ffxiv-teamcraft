@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CraftingRotationsFolder } from '../../../../model/other/crafting-rotations-folder';
 import { CraftingRotation } from '../../../../model/other/crafting-rotation';
 import { combineLatest, Observable, ReplaySubject, Subject } from 'rxjs';
@@ -6,7 +6,8 @@ import { PermissionLevel } from '../../../../core/database/permissions/permissio
 import { distinctUntilChanged, filter, first, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import { AuthFacade } from '../../../../+state/auth.facade';
 import { LinkToolsService } from '../../../../core/tools/link-tools.service';
-import { NzMessageService, NzModalService } from 'ng-zorro-antd';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { TranslateService } from '@ngx-translate/core';
 import { NameQuestionPopupComponent } from '../../../../modules/name-question-popup/name-question-popup/name-question-popup.component';
 import { PermissionsBoxComponent } from '../../../../modules/permissions/permissions-box/permissions-box.component';
@@ -20,7 +21,8 @@ import { RotationsFacade } from '../../../../modules/rotations/+state/rotations.
 @Component({
   selector: 'app-rotation-folder-panel',
   templateUrl: './rotation-folder-panel.component.html',
-  styleUrls: ['./rotation-folder-panel.component.less']
+  styleUrls: ['./rotation-folder-panel.component.less'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RotationFolderPanelComponent {
 
@@ -95,17 +97,13 @@ export class RotationFolderPanelComponent {
     this.customLinksFacade.createCustomLink(folder.name, `rotation-folder/${folder.$key}`, user);
   }
 
-  afterCustomLinkCopy(): void {
-    this.message.success(this.translate.instant('CUSTOM_LINKS.Share_link_copied'));
-  }
-
   deleteFolder(): void {
     this.foldersFacade.deleteFolder(this._folder.$key);
   }
 
-  getLink(): string {
+  getLink = () => {
     return this.syncLinkUrl ? this.syncLinkUrl : this.linkTools.getLink(`/rotation-folder/${this._folder.$key}`);
-  }
+  };
 
   renameFolder(): void {
     this.dialog.create({
@@ -151,10 +149,6 @@ export class RotationFolderPanelComponent {
   removeCraftingRotation(rotation: CraftingRotation): void {
     this._folder.rotationIds = this._folder.rotationIds.filter(key => key !== rotation.$key);
     this.foldersFacade.updateFolder(this._folder);
-  }
-
-  afterLinkCopy(): void {
-    this.message.success(this.translate.instant('SIMULATOR.ROTATIONS.FOLDERS.Share_link_copied'));
   }
 
   trackByCraftingRotation(index: number, rotation: CraftingRotation): string {

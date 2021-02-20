@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { Workshop } from '../../../model/other/workshop';
 import { combineLatest, Observable, ReplaySubject, Subject } from 'rxjs';
 import { WorkshopsFacade } from '../+state/workshops.facade';
@@ -7,7 +7,8 @@ import { distinctUntilChanged, filter, first, map, shareReplay, switchMap, tap, 
 import { AuthFacade } from '../../../+state/auth.facade';
 import { LinkToolsService } from '../../../core/tools/link-tools.service';
 import { TranslateService } from '@ngx-translate/core';
-import { NzMessageService, NzModalService } from 'ng-zorro-antd';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { NameQuestionPopupComponent } from '../../name-question-popup/name-question-popup/name-question-popup.component';
 import { List } from '../../list/model/list';
 import { PermissionsBoxComponent } from '../../permissions/permissions-box/permissions-box.component';
@@ -24,7 +25,7 @@ import { FolderAdditionPickerComponent } from '../../folder-addition-picker/fold
   styleUrls: ['./workshop-panel.component.less'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class WorkshopPanelComponent implements OnChanges {
+export class WorkshopPanelComponent {
 
   @Input()
   public set workshop(l: Workshop) {
@@ -38,8 +39,6 @@ export class WorkshopPanelComponent implements OnChanges {
 
   @Input()
   lists: List[] = [];
-
-  private listsLoaded: string[] = [];
 
   permissionLevel$: Observable<PermissionLevel> = combineLatest([this.authFacade.userId$, this.workshop$]).pipe(
     map(([userId, workshop]) => workshop.getPermissionLevel(userId)),
@@ -106,17 +105,13 @@ export class WorkshopPanelComponent implements OnChanges {
     this.customLinksFacade.createCustomLink(workshop.name, `workshop/${workshop.$key}`, user);
   }
 
-  afterCustomLinkCopy(): void {
-    this.message.success(this.translate.instant('CUSTOM_LINKS.Share_link_copied'));
-  }
-
   deleteWorkshop(): void {
     this.workshopsFacade.deleteWorkshop(this._workshop.$key);
   }
 
-  getLink(): string {
+  getLink = () => {
     return this.syncLinkUrl ? this.syncLinkUrl : this.linkTools.getLink(`/workshop/${this._workshop.$key}`);
-  }
+  };
 
   renameWorkshop(): void {
     this.dialog.create({
@@ -174,7 +169,7 @@ export class WorkshopPanelComponent implements OnChanges {
       })
     ).subscribe((updatedLists: List[]) => {
       updatedLists.forEach(list => {
-        this.listsFacade.updateList(list, true, true);
+        this.listsFacade.pureUpdateList(list.$key, { 'registry': list.registry, 'everyone': list.everyone });
       });
       this.message.success(this.translate.instant('PERMISSIONS.Propagate_changes_done'));
     });
@@ -191,24 +186,7 @@ export class WorkshopPanelComponent implements OnChanges {
     this.workshopsFacade.updateWorkshop(this._workshop);
   }
 
-  afterLinkCopy(): void {
-    this.message.success(this.translate.instant('WORKSHOP.Share_link_copied'));
-  }
-
   trackByList(index: number, list: List): string {
     return list.$key;
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    // Filter the lists we are missing and we need to load
-    this._workshop.listIds
-      .filter(id => {
-        return this.lists.find(l => l.$key === id) === undefined
-          && !this.listsLoaded.includes(id);
-      })
-      .forEach((missingList) => {
-        this.listsFacade.load(missingList);
-        this.listsLoaded.push(missingList);
-      });
   }
 }

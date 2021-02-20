@@ -1,9 +1,11 @@
 {
   "rulesDirectory": [
     "node_modules/codelyzer",
-    "node_modules/@nrwl/workspace/src/tslint"
+    "node_modules/@nrwl/workspace/src/tslint",
+    "node_modules/nz-tslint-rules"
   ],
   "rules": {
+    "nz-secondary-entry-imports": false,
     "arrow-return-shorthand": true,
     "callable-types": true,
     "class-name": true,
@@ -62,18 +64,6 @@
     "use-life-cycle-interface": true,
     "use-pipe-transform-interface": true,
     "component-class-suffix": true,
-    "directive-class-suffix": true,
-    "nx-enforce-module-boundaries": [
-      true,
-      {
-        "allow": [],
-        "depConstraints": [
-          {
-            "sourceTag": "*",
-            "onlyDependOnLibsWithTags": ["*"]
-          }
-        ]
-      }
-    ]
+    "directive-class-suffix": true
   }
 }

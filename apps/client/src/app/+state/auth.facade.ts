@@ -8,11 +8,13 @@ import {
   GetUser,
   LinkingCharacter,
   Logout,
+  MarkAsDoneInLog,
   RegisterUser,
   RemoveCharacter,
   SaveDefaultConsumables,
   SaveSet,
   SetCID,
+  SetContentId,
   SetCurrentFcId,
   SetDefaultCharacter,
   SetWorld,
@@ -21,17 +23,16 @@ import {
   UpdateUser,
   VerifyCharacter
 } from './auth.actions';
-import { auth } from 'firebase/app';
+import firebase from 'firebase/app';
 import { UserCredential } from '@firebase/auth-types';
 import { catchError, distinctUntilChanged, distinctUntilKeyChanged, filter, first, map, shareReplay, startWith, switchMap, tap } from 'rxjs/operators';
 import { AngularFireAuth } from '@angular/fire/auth';
 import { PlatformService } from '../core/tools/platform.service';
 import { IpcService } from '../core/electron/ipc.service';
 import { CharacterLinkPopupComponent } from '../core/auth/character-link-popup/character-link-popup.component';
-import { NzModalService } from 'ng-zorro-antd';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { TranslateService } from '@ngx-translate/core';
 import { combineLatest, from, Observable, of } from 'rxjs';
-import { GearSet } from '@ffxiv-teamcraft/simulator';
 import { TeamcraftUser } from '../model/user/teamcraft-user';
 import { DefaultConsumables } from '../model/user/default-consumables';
 import { Favorites } from '../model/other/favorites';
@@ -39,8 +40,12 @@ import { LodestoneIdEntry } from '../model/user/lodestone-id-entry';
 import { OauthService } from '../core/auth/oauth.service';
 import { ConvertLists } from '../modules/list/+state/lists.actions';
 import { Character } from '@xivapi/angular-client';
-import { UserService } from '../core/database/user.service';
 import { AngularFireFunctions } from '@angular/fire/functions';
+import { LogTracking } from '../model/user/log-tracking';
+import { TeamcraftGearsetStats } from '../model/user/teamcraft-gearset-stats';
+import { GearSet } from '@ffxiv-teamcraft/simulator';
+import { LogTrackingService } from '../core/database/log-tracking.service';
+import { LodestoneService } from '../core/api/lodestone.service';
 
 @Injectable({
   providedIn: 'root'
@@ -51,7 +56,7 @@ export class AuthFacade {
   linkingCharacter$ = this.store.select(authQuery.getLinkingCharacter);
   loggedIn$ = this.store.select(authQuery.getLoggedIn);
   userId$ = this.store.select(authQuery.getUserId).pipe(filter(uid => uid !== null));
-  user$ = this.store.select(authQuery.getUser).pipe(filter(u => u !== undefined && u !== null));
+  user$ = this.store.select(authQuery.getUser).pipe(filter(u => u !== undefined && u !== null && !u.notFound && u.$key !== undefined));
   favorites$ = this.user$.pipe(map(user => user.favorites));
 
   idToken$ = this.af.user.pipe(
@@ -78,14 +83,28 @@ export class AuthFacade {
     shareReplay(1)
   );
 
+  logTracking$ = this.user$.pipe(
+    distinctUntilKeyChanged('defaultLodestoneId'),
+    switchMap(user => {
+      return this.logTrackingService.get(`${user.$key}:${user.defaultLodestoneId?.toString()}`).pipe(
+        catchError((_) => {
+          return of({
+            crafting: [],
+            gathering: []
+          });
+        })
+      );
+    })
+  );
+
   characters$ = this.user$.pipe(
     filter(u => u.lodestoneIds !== undefined),
     switchMap((user: TeamcraftUser) => {
       return combineLatest(user.lodestoneIds.map(entry => {
         if (entry.id > 0) {
-          return this.userService.getCharacter(entry.id)
+          return this.characterService.getCharacter(entry.id)
             .pipe(
-              catchError(err => of(null))
+              catchError(() => of(null))
             );
         }
         return of({
@@ -93,8 +112,36 @@ export class AuthFacade {
         });
       }));
     }),
-    map(characters => characters.filter(c => c !== null)),
+    map(characters => characters.filter(c => c && c.Character)),
     distinctUntilChanged((a, b) => a.length === b.length),
+    shareReplay(1)
+  );
+
+  characterEntries$ = this.user$.pipe(
+    filter(u => u.lodestoneIds !== undefined),
+    switchMap((user: TeamcraftUser) => {
+      return combineLatest(user.lodestoneIds.map(entry => {
+        if (entry.id > 0) {
+          return this.characterService.getCharacter(entry.id)
+            .pipe(
+              catchError(() => of(null)),
+              map(c => {
+                return {
+                  ...entry,
+                  character: c
+                };
+              })
+            );
+        }
+        return of({
+          ...entry,
+          character: {
+            Character: user.customCharacters.find(c => c.ID === entry.id)
+          }
+        });
+      }));
+    }),
+    distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
     shareReplay(1)
   );
 
@@ -106,9 +153,9 @@ export class AuthFacade {
   ]).pipe(
     map(([user, characters]) => {
       const character = characters
-        .filter(c => c.Character !== null)
+        .filter(c => c.Character)
         .find(char => char.Character.ID === user.defaultLodestoneId);
-      const lodestoneIdEntry = user.lodestoneIds.find(entry => entry.id === user.defaultLodestoneId);
+      const lodestoneIdEntry = (user.lodestoneIds || []).find(entry => entry.id === user.defaultLodestoneId);
       // If we couldn't find it, it's maybe because it's a custom one (for KR servers)
       if (character === undefined) {
         const custom = <Character>user.customCharacters.find(c => c.ID === user.defaultLodestoneId);
@@ -128,25 +175,28 @@ export class AuthFacade {
   mainCharacter$ = this.mainCharacterEntry$.pipe(
     map((entry) => {
       return entry.character as Character;
-    })
+    }),
+    filter(c => !!c)
   );
 
   fcId$ = combineLatest([this.mainCharacter$, this.user$]).pipe(
+    filter((res) => !res.includes(undefined)),
     distinctUntilChanged(([a], [b]) => {
       return a.FreeCompanyId === b.FreeCompanyId;
     }),
     map(([character, user]) => {
       if (!character || !character.FreeCompanyId || !character.FreeCompanyId
         || character.FreeCompanyId.toString() === user.currentFcId) {
-        return null;
+        return { id: user.currentFcId, save: false };
       }
-      return character.FreeCompanyId.toString();
+      return { id: character.FreeCompanyId.toString(), save: true };
     }),
-    tap(fcId => {
-      if (fcId !== null) {
-        this.store.dispatch(new SetCurrentFcId(fcId));
+    tap(entry => {
+      if (entry.save) {
+        this.store.dispatch(new SetCurrentFcId(entry.id));
       }
     }),
+    map(entry => entry.id),
     startWith('')
   );
 
@@ -176,7 +226,8 @@ export class AuthFacade {
               craftsmanship: 0,
               cp: 180,
               level: 0,
-              specialist: false
+              specialist: false,
+              priority: jobId - 7
             });
           } else {
             sets.push({
@@ -185,7 +236,8 @@ export class AuthFacade {
               craftsmanship: 0,
               cp: 180,
               level: classJob.Level,
-              specialist: false
+              specialist: false,
+              priority: jobId - 7
             });
           }
         });
@@ -197,9 +249,9 @@ export class AuthFacade {
   constructor(private store: Store<{ auth: AuthState }>, private af: AngularFireAuth,
               private platformService: PlatformService, private ipc: IpcService,
               private dialog: NzModalService, private translate: TranslateService,
-              private oauthService: OauthService, private userService: UserService,
-              private fns: AngularFireFunctions) {
-    this.ipc.cid$.subscribe(packet => {
+              private oauthService: OauthService, private fns: AngularFireFunctions,
+              private logTrackingService: LogTrackingService, private characterService: LodestoneService) {
+    this.ipc.playerSetupPackets$.subscribe(packet => {
       this.setCID(packet.contentID);
     });
 
@@ -209,7 +261,7 @@ export class AuthFacade {
   }
 
   resetPassword(email: string): void {
-    this.af.auth.sendPasswordResetEmail(email);
+    this.af.sendPasswordResetEmail(email);
   }
 
   changeEmail(newEmail: string): Observable<void> {
@@ -248,8 +300,8 @@ export class AuthFacade {
     this.store.dispatch(new ToggleMasterbooks(books));
   }
 
-  public saveSet(set: GearSet, ignoreSpecialist = false): void {
-    this.store.dispatch(new SaveSet(set, ignoreSpecialist));
+  public saveSet(set: TeamcraftGearsetStats | GearSet, ignoreSpecialist = false): void {
+    this.store.dispatch(new SaveSet(set as TeamcraftGearsetStats, ignoreSpecialist));
   }
 
   public saveDefaultConsumables(consumables: DefaultConsumables): void {
@@ -269,14 +321,14 @@ export class AuthFacade {
   }
 
   public login(email: string, password: string): Promise<UserCredential> {
-    return this.af.auth.signInWithEmailAndPassword(email, password);
+    return this.af.signInWithEmailAndPassword(email, password);
   }
 
   public register(email: string, password: string): Promise<any> {
     return this.user$.pipe(
       first(),
       switchMap((user) => {
-        return from(this.af.auth.createUserWithEmailAndPassword(email, password)).pipe(
+        return from(this.af.createUserWithEmailAndPassword(email, password)).pipe(
           tap(a => {
             this.store.dispatch(new RegisterUser(a.user.uid, user));
             this.store.dispatch(new ConvertLists(a.user.uid));
@@ -287,15 +339,15 @@ export class AuthFacade {
   }
 
   public googleOauth(): Observable<UserCredential> {
-    return this.oauthPopup(new auth.GoogleAuthProvider());
+    return this.oauthPopup(new firebase.auth.GoogleAuthProvider());
   }
 
   public facebookOauth(): Observable<UserCredential> {
-    return this.oauthPopup(new auth.FacebookAuthProvider());
+    return this.oauthPopup(new firebase.auth.FacebookAuthProvider());
   }
 
   public logout(): void {
-    this.af.auth.signOut().then(() => {
+    this.af.signOut().then(() => {
       this.store.dispatch(new Logout());
       window.location.reload();
     });
@@ -309,8 +361,16 @@ export class AuthFacade {
     this.store.dispatch(new SetCID(cid));
   }
 
+  public setContentId(lodestoneId: number, contentId: string): void {
+    this.store.dispatch(new SetContentId(lodestoneId, contentId));
+  }
+
   public setWorld(world: number): void {
     this.store.dispatch(new SetWorld(world));
+  }
+
+  public markAsDoneInLog(log: keyof LogTracking, itemId: number, done: boolean): void {
+    this.store.dispatch(new MarkAsDoneInLog(log, itemId, done));
   }
 
   private oauthPopup(provider: any): Observable<UserCredential> {

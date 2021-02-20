@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
-import { NzModalRef } from 'ng-zorro-antd';
+import { NzModalRef } from 'ng-zorro-antd/modal';
 import { ListsFacade } from '../+state/lists.facade';
 import { List } from '../model/list';
 import { Router } from '@angular/router';
+import { CommissionsFacade } from '../../commission-board/+state/commissions.facade';
 
 @Component({
   selector: 'app-list-completion-popup',
@@ -13,7 +14,8 @@ export class ListCompletionPopupComponent {
 
   list: List;
 
-  constructor(private ref: NzModalRef, private listsFacade: ListsFacade, private router: Router) {
+  constructor(private ref: NzModalRef, private listsFacade: ListsFacade, private router: Router,
+              private commissionsFacade: CommissionsFacade) {
   }
 
   close(): void {
@@ -21,7 +23,11 @@ export class ListCompletionPopupComponent {
   }
 
   deleteList(): void {
-    this.listsFacade.deleteList(this.list.$key, this.list.offline);
+    if (this.list.hasCommission) {
+      this.commissionsFacade.delete(this.list.$key, true);
+    } else {
+      this.listsFacade.deleteList(this.list.$key, this.list.offline);
+    }
     this.router.navigate(['/lists']);
     this.close();
   }
@@ -29,6 +35,11 @@ export class ListCompletionPopupComponent {
   resetList(): void {
     this.list.reset();
     this.listsFacade.updateList(this.list);
+    this.close();
+  }
+
+  archiveList(): void {
+    this.listsFacade.pureUpdateList(this.list.$key, { archived: true });
     this.close();
   }
 

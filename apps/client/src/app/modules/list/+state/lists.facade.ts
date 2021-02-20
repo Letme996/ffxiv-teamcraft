@@ -6,7 +6,9 @@ import { ListsState } from './lists.reducer';
 import { listsQuery } from './lists.selectors';
 import {
   CreateList,
-  DeleteList,
+  DeleteList, DeleteLists,
+  ListDetailsLoaded,
+  LoadArchivedLists,
   LoadListDetails,
   LoadMyLists,
   LoadSharedLists,
@@ -14,6 +16,7 @@ import {
   NeedsVerification,
   OfflineListsLoaded,
   PinList,
+  PureUpdateList,
   SelectList,
   SetItemDone,
   ToggleAutocompletion,
@@ -21,14 +24,14 @@ import {
   UnPinList,
   UpdateItem,
   UpdateList,
-  UpdateListIndex
+  UpdateListIndexes
 } from './lists.actions';
 import { List } from '../model/list';
 import { NameQuestionPopupComponent } from '../../name-question-popup/name-question-popup/name-question-popup.component';
-import { distinctUntilChanged, filter, first, map, shareReplay, switchMap, throttleTime } from 'rxjs/operators';
-import { NzModalService } from 'ng-zorro-antd';
+import { distinctUntilChanged, filter, first, map, mergeMap, shareReplay, switchMap, tap, throttleTime } from 'rxjs/operators';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { TranslateService } from '@ngx-translate/core';
-import { combineLatest, Observable, of } from 'rxjs';
+import { combineLatest, concat, Observable, of } from 'rxjs';
 import { AuthFacade } from '../../../+state/auth.facade';
 import { PermissionLevel } from '../../../core/database/permissions/permission-level.enum';
 import { ListRow } from '../model/list-row';
@@ -37,6 +40,11 @@ import { Team } from '../../../model/team/team';
 import { SettingsService } from '../../settings/settings.service';
 import { environment } from '../../../../environments/environment';
 import { InventoryFacade } from '../../inventory/+state/inventory.facade';
+import { NavigationEnd, Router } from '@angular/router';
+import { NgSerializerService } from '@kaiu/ng-serializer';
+import { ItemPickerService } from '../../item-picker/item-picker.service';
+import { ListManagerService } from '../list-manager.service';
+import { ProgressPopupService } from '../../progress-popup/progress-popup.service';
 
 declare const gtag: Function;
 
@@ -45,6 +53,7 @@ declare const gtag: Function;
 })
 export class ListsFacade {
   loadingMyLists$ = this.store.select(listsQuery.getListsLoading);
+  connectedTeams$ = this.store.select(listsQuery.getConnectedTeams);
   allListDetails$ = this.store.select(listsQuery.getAllListDetails)
     .pipe(
       map(lists => {
@@ -74,7 +83,7 @@ export class ListsFacade {
           map(([compacts, userId]) => {
             return compacts.filter(c => {
               return !c.notFound
-                && c.getPermissionLevel(userId) >= PermissionLevel.PARTICIPATE
+                && c.getPermissionLevel(userId) >= PermissionLevel.READ
                 && c.hasExplicitPermissions(userId)
                 && c.authorId !== userId;
             });
@@ -93,7 +102,7 @@ export class ListsFacade {
           return this.sortLists(
             compacts.filter(c => {
               return !c.notFound
-                && Math.max(c.getPermissionLevel(userId), c.getPermissionLevel(fcId)) >= PermissionLevel.PARTICIPATE
+                && Math.max(c.getPermissionLevel(userId), c.getPermissionLevel(fcId)) >= PermissionLevel.READ
                 && (c.hasExplicitPermissions(userId) || c.hasExplicitPermissions(fcId))
                 && c.authorId !== userId;
             })
@@ -104,8 +113,8 @@ export class ListsFacade {
     shareReplay(1)
   );
 
-  public listsWithWriteAccess$ = combineLatest([this.sharedLists$, this.authFacade.user$, this.authFacade.userId$, this.authFacade.fcId$]).pipe(
-    map(([compacts, user, userId, fcId]) => {
+  public listsWithWriteAccess$ = combineLatest([this.allListDetails$, this.authFacade.user$, this.authFacade.userId$, this.authFacade.fcId$, this.teamsFacade.myTeams$]).pipe(
+    map(([compacts, user, userId, fcId, teams]) => {
       if (user !== null) {
         const idEntry = user.lodestoneIds.find(l => l.id === user.defaultLodestoneId);
         const verified = idEntry && idEntry.verified;
@@ -115,8 +124,12 @@ export class ListsFacade {
       }
       return this.sortLists(
         compacts.filter(c => {
+          const hasFcPermission = Math.max(c.getPermissionLevel(userId), c.getPermissionLevel(fcId)) >= PermissionLevel.WRITE;
+          const hasTeamPermission = teams.map(team => `team:${team.$key}`).some(key => {
+            return c.getPermissionLevel(key) >= PermissionLevel.WRITE;
+          });
           return !c.notFound
-            && Math.max(c.getPermissionLevel(userId), c.getPermissionLevel(fcId)) >= PermissionLevel.WRITE
+            && (hasFcPermission || hasTeamPermission)
             && c.authorId !== userId;
         })
       );
@@ -151,7 +164,11 @@ export class ListsFacade {
       if (list.notFound) {
         return 20;
       }
-      return Math.max(list.getPermissionLevel(userId), list.getPermissionLevel(fcId), (team !== undefined && list.teamId === team.$key) ? 20 : 0);
+      let teamPermissionLevel = 0;
+      if (team !== undefined && list.teamId === team.$key) {
+        teamPermissionLevel = Math.max(list.getPermissionLevel(`team:${list.teamId}`), 20);
+      }
+      return Math.max(list.getPermissionLevel(userId), list.getPermissionLevel(fcId), teamPermissionLevel);
     }),
     distinctUntilChanged(),
     shareReplay(1)
@@ -165,8 +182,23 @@ export class ListsFacade {
 
   completionNotificationEnabled$ = this.store.select(listsQuery.getCompletionNotificationEnabled);
 
+  private overlay: boolean;
+
   constructor(private store: Store<{ lists: ListsState }>, private dialog: NzModalService, private translate: TranslateService, private authFacade: AuthFacade,
-              private teamsFacade: TeamsFacade, private settings: SettingsService, private userInventoryService: InventoryFacade) {
+              private teamsFacade: TeamsFacade, private settings: SettingsService, private userInventoryService: InventoryFacade,
+              private router: Router, private serializer: NgSerializerService, private itemPicker: ItemPickerService,
+              private listManager: ListManagerService, private progress: ProgressPopupService) {
+    router.events
+      .pipe(
+        distinctUntilChanged((previous: any, current: any) => {
+          if (current instanceof NavigationEnd) {
+            return previous.url === current.url;
+          }
+          return true;
+        })
+      ).subscribe((event: any) => {
+      this.overlay = event.url.indexOf('?overlay') > -1;
+    });
   }
 
   getTeamLists(team: Team): Observable<List[]> {
@@ -187,6 +219,14 @@ export class ListsFacade {
     });
   }
 
+  loadArchivedLists(): void {
+    this.store.dispatch(new LoadArchivedLists());
+  }
+
+  deleteLists(keys: string[]): void {
+    this.store.dispatch(new DeleteLists(keys))
+  }
+
   newList(): Observable<List> {
     return this.dialog.create({
       nzContent: NameQuestionPopupComponent,
@@ -199,9 +239,7 @@ export class ListsFacade {
     }).afterClose.pipe(
       filter(res => res && res.name !== undefined),
       map(res => {
-        const list = new List();
-        list.everyone = this.settings.defaultPermissionLevel;
-        list.name = res.name;
+        const list = this.newListWithName(res.name);
         list.ephemeral = res.ephemeral;
         list.offline = res.offline;
         return list;
@@ -210,10 +248,15 @@ export class ListsFacade {
   }
 
   newEphemeralList(itemName: string): List {
-    const list = new List();
-    list.everyone = this.settings.defaultPermissionLevel;
+    this.loadMyLists();
+    const list = this.newListWithName(itemName);
     list.ephemeral = true;
-    list.name = itemName;
+    return list;
+  }
+
+  newListWithName(name: string): List {
+    const list = new List(this.settings);
+    list.name = name;
     return list;
   }
 
@@ -233,6 +276,17 @@ export class ListsFacade {
     });
   }
 
+  addListAndWait(list: List): Observable<List> {
+    this.addList(list);
+    return this.allListDetails$.pipe(
+      map(lists => {
+        return lists.find(l => l.createdAt.seconds === list.createdAt.seconds && l.items.length === list.items.length && l.name === list.name);
+      }),
+      filter(l => !!l),
+      first()
+    );
+  }
+
   deleteList(key: string, offline: boolean): void {
     this.store.dispatch(new DeleteList(key, offline));
     gtag('event', 'List', {
@@ -245,12 +299,16 @@ export class ListsFacade {
     this.store.dispatch(new UpdateList(list, updateCompact, force));
   }
 
+  pureUpdateList($key: string, data: Partial<List>): void {
+    this.store.dispatch(new PureUpdateList($key, data));
+  }
+
   loadTeamLists(teamId: string): void {
     this.store.dispatch(new LoadTeamLists(teamId));
   }
 
-  updateListIndex(list: List): void {
-    this.store.dispatch(new UpdateListIndex(list));
+  updateListIndexes(lists: List[]): void {
+    this.store.dispatch(new UpdateListIndexes(lists));
   }
 
   loadMyLists(): void {
@@ -271,14 +329,14 @@ export class ListsFacade {
 
   toggleAutocomplete(newValue: boolean): void {
     this.store.dispatch(new ToggleAutocompletion(newValue));
-    if (newValue) {
+    if (newValue && !this.overlay) {
       this.userInventoryService.inventory$.pipe(
         first(),
         filter((inventory) => {
           if (!inventory.lastZone) {
             return true;
           }
-          return inventory.lastZone.seconds < environment.startTimestamp / 1000;
+          return inventory.lastZone < environment.startTimestamp;
         }),
         map(() => {
           return this.dialog.create({
@@ -291,7 +349,7 @@ export class ListsFacade {
         }),
         switchMap((modal) => {
           return this.userInventoryService.inventory$.pipe(
-            filter(inventory => inventory.lastZone.seconds > environment.startTimestamp / 1000),
+            filter(inventory => inventory.lastZone > environment.startTimestamp),
             first(),
             map(() => modal)
           );
@@ -324,7 +382,10 @@ export class ListsFacade {
   }
 
   select(key: string): void {
-    this.store.dispatch(new SelectList(key, this.settings.enableAutofillByDefault));
+    this.store.dispatch(new SelectList(key));
+    if (this.settings.enableAutofillByDefault) {
+      this.toggleAutocomplete(true);
+    }
     if (this.settings.enableAutofillNotificationByDefault) {
       this.store.dispatch(new ToggleCompletionNotification(true));
     }
@@ -342,9 +403,75 @@ export class ListsFacade {
     return lists
       .sort((a, b) => {
         if (a.index === b.index) {
-          return b.createdAt.toMillis() - a.createdAt.toMillis();
+          return b.createdAt.seconds - a.createdAt.seconds;
         }
         return a.index - b.index;
       });
+  }
+
+  overlayListsLoaded(data: List[]): void {
+    const lists = this.serializer.deserialize<List>(data, [List]);
+    lists.filter(l => !l.offline).forEach(list => {
+      this.store.dispatch(new ListDetailsLoaded(list));
+    });
+    const offline = lists.filter(l => l.offline);
+    if (offline.length > 0) {
+      this.offlineListsLoaded(offline);
+    }
+  }
+
+  /**
+   * Gets progression % as a [0,100] float
+   * @param items the items to build progression on.
+   */
+  public buildProgression(items: ListRow[]): number {
+    if (items.length === 0) {
+      return 0;
+    }
+    return 100 * items.reduce((acc, item) => {
+      acc += item.done / item.amount;
+      return acc;
+    }, 0) / items.length;
+  }
+
+  addItems(list: List): Observable<any> {
+    return this.itemPicker.pickItems().pipe(
+      filter(items => items?.length > 0),
+      switchMap((items) => {
+        const operations = items.map(item => {
+          return this.listManager.addToList({
+            itemId: +item.itemId,
+            list: list,
+            recipeId: item.recipe ? item.recipe.recipeId : '',
+            amount: item.amount,
+            collectible: item.addCrafts
+          });
+        });
+        let operation$: Observable<any>;
+        if (operations.length > 0) {
+          operation$ = concat(
+            ...operations
+          );
+        } else {
+          operation$ = of(list);
+        }
+        return this.progress.showProgress(operation$,
+          items.length,
+          'Adding_recipes',
+          { amount: items.length, listname: list.name });
+      }),
+      tap(l => list.$key ? this.updateList(l) : this.addList(l)),
+      mergeMap(updatedList => {
+        // We want to get the list created before calling it a success, let's be pessimistic !
+        return this.progress.showProgress(
+          combineLatest([this.myLists$, this.listsWithWriteAccess$]).pipe(
+            map(([myLists, listsICanWrite]) => [...myLists, ...listsICanWrite]),
+            map(lists => lists.find(l => l.createdAt.toMillis() === updatedList.createdAt.toMillis() && l.$key !== undefined)),
+            filter(l => l !== undefined),
+            first()
+          ), 1, 'Saving_in_database');
+      })
+    );
+
   }
 }

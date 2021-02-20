@@ -3,7 +3,7 @@ import { Favorites } from '../other/favorites';
 import { LodestoneIdEntry } from './lodestone-id-entry';
 import { Character } from '@xivapi/angular-client';
 import { DefaultConsumables } from './default-consumables';
-import * as firebase from 'firebase/app';
+import firebase from 'firebase/app';
 
 export class TeamcraftUser extends DataModel {
   createdAt: firebase.firestore.Timestamp;
@@ -12,9 +12,16 @@ export class TeamcraftUser extends DataModel {
   currentFcId: string;
   lodestoneIds: LodestoneIdEntry[] = [];
 
-  customCharacters: Partial<Character>[] = [];
+  customCharacters: Partial<Character & { contentId: string }>[] = [];
 
-  favorites: Favorites = { lists: [], workshops: [], rotations: [], rotationFolders: [] };
+  favorites: Favorites = {
+    lists: [],
+    workshops: [],
+    rotations: [],
+    rotationFolders: [],
+    gearsets: [],
+    gearsetFolders: []
+  };
 
   contacts: string[] = [];
 
@@ -23,6 +30,11 @@ export class TeamcraftUser extends DataModel {
   moderator = false;
 
   patron = false;
+
+  // For shared benefits or one-time donations benefits.
+  patreonBenefitsUntil: firebase.firestore.Timestamp;
+
+  sekrit?: boolean;
 
   defaultConsumables: DefaultConsumables;
 
@@ -33,9 +45,6 @@ export class TeamcraftUser extends DataModel {
   lastPatreonRefresh?: number;
 
   nickname: string;
-
-  logProgression: number[] = [];
-  gatheringLogProgression: number[] = [];
 
   itemTags: { id: number, tag: string }[] = [];
 

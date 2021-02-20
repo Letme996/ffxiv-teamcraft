@@ -7,7 +7,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { DesynthSearchResult } from '../desynth-search-result';
 import { SearchResult } from '../../../model/search/search-result';
 import { ListManagerService } from '../../../modules/list/list-manager.service';
-import { NzNotificationService } from 'ng-zorro-antd';
+import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { LocalizedDataService } from '../../../core/data/localized-data.service';
 import { I18nToolsService } from '../../../core/tools/i18n-tools.service';
 import { ListPickerService } from '../../../modules/list-picker/list-picker.service';
@@ -77,14 +77,19 @@ export class DesynthComponent {
           indexes: [SearchIndex.ITEM],
           filters: [
             {
-              column: 'Salvage.OptimalSkill',
+              column: 'LevelItem',
               operator: '>=',
               value: Math.max(dlvl - 10, 0)
             },
             {
-              column: 'Salvage.OptimalSkill',
+              column: 'LevelItem',
               operator: '<=',
               value: dlvl + 10
+            },
+            {
+              column: 'Desynth',
+              operator: '>',
+              value: 0
             },
             {
               column: 'ClassJobRepairTargetID',
@@ -94,7 +99,7 @@ export class DesynthComponent {
           ],
           limit: 250,
           columns: [
-            'Icon', 'Salvage.OptimalSkill', 'ID', 'GameContentLinks'
+            'Icon', 'LevelItem', 'ID', 'GameContentLinks'
           ]
         });
       }),
@@ -123,7 +128,7 @@ export class DesynthComponent {
             return {
               itemId: item.ID,
               icon: item.Icon,
-              dlvl: item.Salvage.OptimalSkill,
+              dlvl: item.LevelItem,
               score: score,
               amount: 1
             };
@@ -163,7 +168,13 @@ export class DesynthComponent {
 
   public createQuickList(item: SearchResult): void {
     const list = this.listsFacade.newEphemeralList(this.i18n.getName(this.l12n.getItem(+item.itemId)));
-    const operation$ = this.listManager.addToList(+item.itemId, list, item.recipe ? item.recipe.recipeId : '', item.amount, item.addCrafts)
+    const operation$ = this.listManager.addToList({
+      itemId: +item.itemId,
+      list: list,
+      recipeId: item.recipe ? item.recipe.recipeId : '',
+      amount: item.amount,
+      collectible: item.addCrafts
+    })
       .pipe(
         tap(resultList => this.listsFacade.addList(resultList)),
         mergeMap(resultList => {
@@ -185,8 +196,13 @@ export class DesynthComponent {
     this.listPicker.pickList().pipe(
       mergeMap(list => {
         const operations = items.map(item => {
-          return this.listManager.addToList(+item.itemId, list,
-            item.recipe ? item.recipe.recipeId : '', item.amount, item.addCrafts);
+          return this.listManager.addToList({
+            itemId: +item.itemId,
+            list: list,
+            recipeId: item.recipe ? item.recipe.recipeId : '',
+            amount: item.amount,
+            collectible: item.addCrafts
+          });
         });
         let operation$: Observable<any>;
         if (operations.length > 0) {
@@ -205,7 +221,7 @@ export class DesynthComponent {
       mergeMap(list => {
         // We want to get the list created before calling it a success, let's be pessimistic !
         return this.progressService.showProgress(
-          combineLatest(this.listsFacade.myLists$, this.listsFacade.listsWithWriteAccess$).pipe(
+          combineLatest([this.listsFacade.myLists$, this.listsFacade.listsWithWriteAccess$]).pipe(
             map(([myLists, listsICanWrite]) => [...myLists, ...listsICanWrite]),
             map(lists => lists.find(l => l.createdAt.toMillis() === list.createdAt.toMillis() && l.$key !== undefined)),
             filter(l => l !== undefined),

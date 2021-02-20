@@ -9,17 +9,20 @@ import { combineLatest, concat, interval, Observable, of } from 'rxjs';
 import { ListPickerService } from '../../../modules/list-picker/list-picker.service';
 import { ProgressPopupService } from '../../../modules/progress-popup/progress-popup.service';
 import { ActivatedRoute, Router } from '@angular/router';
-import { folklores } from '../../../core/data/sources/folklores';
-import { reductions } from '../../../core/data/sources/reductions';
-import { BellNodesService } from '../../../core/data/bell-nodes.service';
 import { LocalizedDataService } from '../../../core/data/localized-data.service';
 import { AlarmsFacade } from '../../../core/alarms/+state/alarms.facade';
 import { LazyDataService } from '../../../core/data/lazy-data.service';
 import { TrackerComponent } from '../tracker-component';
 import { NavigationObjective } from '../../../modules/map/navigation-objective';
-import { NzModalService, NzNotificationService } from 'ng-zorro-antd';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { WorldNavigationMapComponent } from '../../../modules/map/world-navigation-map/world-navigation-map.component';
 import { List } from '../../../modules/list/model/list';
+import { Memoized } from '../../../core/decorators/memoized';
+import { GatheringNodesService } from '../../../core/data/gathering-nodes.service';
+import { GatheringNode } from '../../../core/data/model/gathering-node';
+import { Alarm } from '../../../core/alarms/alarm';
+import { SettingsService } from '../../../modules/settings/settings.service';
 
 @Component({
   selector: 'app-log-tracker',
@@ -34,21 +37,36 @@ export class LogTrackerComponent extends TrackerComponent {
   public dohTabs: any[];
   public dolTabs: any[];
 
-  private dohPageNameCache: { [index: number]: string } = {};
-  private dolPageNameCache: { [index: number]: string } = {};
-
   public userCompletion: { [index: number]: boolean } = {};
   public userGatheringCompletion: { [index: number]: boolean } = {};
 
-  public nodeDataCache: any[][] = [];
+  public nodeDataCache: { gatheringNode: GatheringNode, alarms: Alarm[] }[][][] = [];
 
-  public dohSelectedPage = 0;
-  public dolSelectedPage = 0;
+  private _dohSelectedPage = 0;
+  public get dohSelectedPage(): number {
+    return this._dohSelectedPage;
+  }
+
+  public set dohSelectedPage(index: number) {
+    this._dohSelectedPage = index;
+    this.selectedRecipes = [];
+  }
+
+  private _dolSelectedPage = 0;
+  public get dolSelectedPage(): number {
+    return this._dolSelectedPage;
+  }
+
+  public set dolSelectedPage(index: number) {
+    this._dolSelectedPage = index;
+    this.selectedRecipes = [];
+  }
 
   public type$: Observable<number>;
 
-  public hideCompleted = false;
+  public hideCompleted = this.settings.hideCompletedLogEntries;
 
+  public selectedRecipes: { itemId: number, recipeId: number }[] = [];
 
   @ViewChild('notificationRef', { static: true })
   notification: TemplateRef<any>;
@@ -61,19 +79,28 @@ export class LogTrackerComponent extends TrackerComponent {
   constructor(private authFacade: AuthFacade, private gt: GarlandToolsService, private translate: TranslateService,
               private listsFacade: ListsFacade, private listManager: ListManagerService, private listPicker: ListPickerService,
               private progressService: ProgressPopupService, private router: Router, private route: ActivatedRoute,
-              private bell: BellNodesService, private l12n: LocalizedDataService, protected alarmsFacade: AlarmsFacade,
-              private lazyData: LazyDataService, private dialog: NzModalService, private notificationService: NzNotificationService) {
+              private l12n: LocalizedDataService, protected alarmsFacade: AlarmsFacade, private gatheringNodesService: GatheringNodesService,
+              private lazyData: LazyDataService, private dialog: NzModalService, private notificationService: NzNotificationService,
+              public settings: SettingsService) {
     super(alarmsFacade);
-    this.dohTabs = [...this.lazyData.data.craftingLogPages];
+    this.dohTabs = [...this.lazyData.data.craftingLogPages].map(page => {
+      return page.map(tab => {
+        tab.recipes = tab.recipes.map(entry => {
+          entry.leves = this.lazyData.getItemLeveIds(entry.itemId);
+          return entry;
+        });
+        return tab;
+      });
+    });
     this.dolTabs = [...this.lazyData.data.gatheringLogPages];
-    this.authFacade.user$.pipe(
-    ).subscribe(user => {
+    this.authFacade.logTracking$.pipe(
+    ).subscribe(logTracking => {
       this.userCompletion = {};
       this.userGatheringCompletion = {};
-      user.logProgression.forEach(recipeId => {
+      logTracking.crafting.forEach(recipeId => {
         this.userCompletion[recipeId] = true;
       });
-      user.gatheringLogProgression.forEach(itemId => {
+      logTracking.gathering.forEach(itemId => {
         this.userGatheringCompletion[itemId] = true;
       });
     });
@@ -92,15 +119,27 @@ export class LogTrackerComponent extends TrackerComponent {
     });
   }
 
-  public createList(page: any, limit?: number): void {
+  public setSelection(recipe: any, selected: boolean): void {
+    if (selected) {
+      this.selectedRecipes.push(recipe);
+    } else {
+      this.selectedRecipes = this.selectedRecipes.filter(r => r.recipeId !== recipe.recipeId);
+    }
+  }
+
+  public createListForPage(page: any, limit?: number): void {
     let recipesToAdd = page.recipes.filter(recipe => !this.userCompletion[recipe.recipeId]);
     if (limit) {
       recipesToAdd = recipesToAdd.slice(0, limit);
     }
+    this.createList(recipesToAdd);
+  }
+
+  public createList(recipesToAdd: { itemId: number, recipeId: number }[]): void {
     this.listPicker.pickList().pipe(
       mergeMap(list => {
         const operations = recipesToAdd.map(recipe => {
-          return this.listManager.addToList(recipe.itemId, list, recipe.recipeId, 1);
+          return this.listManager.addToList({ itemId: recipe.itemId, list: list, recipeId: recipe.recipeId, amount: 1 });
         });
         let operation$: Observable<any>;
         if (operations.length > 0) {
@@ -126,7 +165,7 @@ export class LogTrackerComponent extends TrackerComponent {
       mergeMap(list => {
         // We want to get the list created before calling it a success, let's be pessimistic !
         return this.progressService.showProgress(
-          combineLatest(this.listsFacade.myLists$, this.listsFacade.listsWithWriteAccess$).pipe(
+          combineLatest([this.listsFacade.myLists$, this.listsFacade.listsWithWriteAccess$]).pipe(
             map(([myLists, listsICanWrite]) => [...myLists, ...listsICanWrite]),
             map(lists => lists.find(l => l.createdAt.toMillis() === list.createdAt.toMillis() && l.$key !== undefined)),
             filter(l => l !== undefined),
@@ -148,8 +187,12 @@ export class LogTrackerComponent extends TrackerComponent {
     return `${page.items.filter(item => this.userGatheringCompletion[item.itemId]).length}/${page.items.length}`;
   }
 
-  public isPageDone(page: any): boolean {
+  public isDoLPageDone(page: any): boolean {
     return page.items.filter(item => this.userGatheringCompletion[item.itemId]).length >= page.items.length;
+  }
+
+  public isDoHPageDone(page: any): boolean {
+    return page.recipes.filter(r => this.userCompletion[r.recipeId]).length >= page.recipes.length;
   }
 
   public getDohIcon(index: number): string {
@@ -166,219 +209,69 @@ export class LogTrackerComponent extends TrackerComponent {
   }
 
   public markDohAsDone(recipeId: number, done: boolean): void {
-    this.authFacade.user$.pipe(first()).subscribe(user => {
-      if (done) {
-        user.logProgression.push(recipeId);
-      } else {
-        user.logProgression = user.logProgression.filter(entry => entry !== recipeId);
-      }
-      this.userCompletion[recipeId] = done;
-      this.authFacade.updateUser(user);
-    });
+    this.authFacade.markAsDoneInLog('crafting', recipeId, done);
+    this.userCompletion[recipeId] = done;
   }
 
-  public markDolAsDone(recipeId: number, done: boolean): void {
-    this.authFacade.user$.pipe(first()).subscribe(user => {
-      if (done) {
-        user.gatheringLogProgression.push(recipeId);
-      } else {
-        user.gatheringLogProgression = user.gatheringLogProgression.filter(entry => entry !== recipeId);
-      }
-      this.userGatheringCompletion[recipeId] = done;
-      this.authFacade.updateUser(user);
-    });
+  public markDolAsDone(itemId: number, done: boolean): void {
+    this.authFacade.markAsDoneInLog('gathering', itemId, done);
+    this.userGatheringCompletion[itemId] = done;
   }
 
   public markDohPageAsDone(page: any): void {
-    this.authFacade.user$.pipe(first()).subscribe(user => {
-      user.logProgression.push(...page.recipes.map(r => {
-        this.userCompletion[r.recipeId] = true;
-        return r.recipeId;
-      }));
-      this.authFacade.updateUser(user);
-    });
+    page.recipes
+      .filter(r => {
+        return !this.userCompletion[r.recipeId];
+      })
+      .map(r => {
+        this.authFacade.markAsDoneInLog('crafting', r.recipeId, true);
+      });
   }
 
   public markDolPageAsDone(page: any): void {
-    this.authFacade.user$.pipe(first()).subscribe(user => {
-      user.gatheringLogProgression.push(...page.items.map(i => {
-        this.userGatheringCompletion[i.itemId] = true;
-        return i.itemId;
-      }));
-      this.authFacade.updateUser(user);
+    page.items
+      .filter(i => {
+        return !this.userGatheringCompletion[i.itemId];
+      })
+      .map(i => {
+        this.authFacade.markAsDoneInLog('gathering', i.itemId, true);
+      });
+  }
+
+  @Memoized()
+  public getDohDivisionId(pageId: number): number {
+    return +Object.keys(this.lazyData.data.notebookDivision).find(key => {
+      return this.lazyData.data.notebookDivision[key].pages.indexOf(pageId) > -1;
     });
   }
 
-  public getDohPageName(page: any): string {
-    if (this.dohPageNameCache[page.id] === undefined) {
-      this.dohPageNameCache[page.id] = this._getDohPageName(page);
-    }
-    return this.dohPageNameCache[page.id];
-  }
-
-  public getDolPageName(page: any): string {
-    if (this.dolPageNameCache[page.id] === undefined) {
-      this.dolPageNameCache[page.id] = this._getDolPageName(page);
-    }
-    return this.dolPageNameCache[page.id];
+  @Memoized()
+  public getDolDivisionId(pageId: number): number {
+    return +Object.keys(this.lazyData.data.notebookDivision).find(key => {
+      return this.lazyData.data.notebookDivision[key].pages.indexOf(pageId) > -1;
+    });
   }
 
   public isRequiredForAchievement(page: any): boolean {
-    return !page.masterbook
-      && (
-        (page.startLevel.ClassJobLevel !== 50
-          && page.startLevel.ClassJobLevel !== 30
-        )
-        || (page.id > 1055 && page.id < 1072)
-      ) &&
-      page.id < 1088;
+    const division = this.l12n.getNotebookDivision(this.getDohDivisionId(page.id));
+    return /\d{1,2}-\d{1,2}/.test(division.name.en) || division.name.en.startsWith('Housing');
   }
 
-  public getNodeData(itemId: number, tab: number): any {
+  public getNodeData(itemId: number, tab: number): { gatheringNode: GatheringNode, alarms: Alarm[] }[] {
     if (this.nodeDataCache[itemId] === undefined) {
       this.nodeDataCache[itemId] = [];
     }
     if (this.nodeDataCache[itemId][tab] === undefined) {
-      this.nodeDataCache[itemId][tab] = this._getNodeData(itemId, tab);
+      this.nodeDataCache[itemId][tab] = this.gatheringNodesService.getItemNodes(itemId, true)
+        .slice(0, 3)
+        .map(gatheringNode => {
+          return {
+            gatheringNode: gatheringNode,
+            alarms: gatheringNode.limited ? this.alarmsFacade.generateAlarms(gatheringNode) : []
+          };
+        });
     }
     return this.nodeDataCache[itemId][tab];
-  }
-
-  private _getNodeData(itemId: number, pageId: number): any {
-    const tab = Math.floor(pageId / 40);
-    const availableNodeIds = Object.keys(this.lazyData.data.nodePositions)
-      .filter(key => {
-        return this.lazyData.data.nodePositions[key].items.indexOf(itemId) > -1;
-      });
-    const nodesFromPositions = availableNodeIds
-      .map(key => {
-        return { ...this.lazyData.data.nodePositions[key], nodeId: key };
-      })
-      .filter(node => {
-        return tab > 10 || node.type === tab;
-      })
-      .map(node => {
-        const bellNode = this.bell.getNode(+node.nodeId);
-        node.timed = bellNode !== undefined;
-        node.itemId = itemId;
-        node.icon = this.lazyData.data.itemIcons[itemId];
-        if (node.timed) {
-          const slotMatch = bellNode.items.find(nodeItem => nodeItem.id === itemId);
-          node.spawnTimes = bellNode.time;
-          node.uptime = bellNode.uptime;
-          if (slotMatch !== undefined) {
-            node.slot = slotMatch.slot;
-          }
-        }
-        node.hidden = node.items && !node.items.some(i => i === node.itemId);
-        node.mapId = node.map;
-        const folklore = Object.keys(folklores).find(id => folklores[id].indexOf(itemId) > -1);
-        if (folklore !== undefined) {
-          node.folklore = {
-            id: +folklore,
-            icon: [7012, 7012, 7127, 7127, 7128, 7128][node.type]
-          };
-        }
-        return node;
-      });
-    const nodesFromGarlandBell = this.bell.getNodesByItemId(itemId)
-      .filter(node => {
-        return tab > 10 || node.type === tab;
-      })
-      .map(node => {
-        const nodePosition = this.lazyData.data.nodePositions[node.id];
-        const result: any = {
-          nodeId: node.id,
-          zoneid: this.l12n.getAreaIdByENName(node.zone),
-          mapId: nodePosition ? nodePosition.map : this.l12n.getAreaIdByENName(node.zone),
-          x: node.coords[0],
-          y: node.coords[1],
-          level: node.lvl,
-          type: node.type,
-          itemId: node.itemId,
-          icon: node.icon,
-          spawnTimes: node.time,
-          uptime: node.uptime,
-          slot: node.slot,
-          timed: true,
-          reduction: reductions[itemId] && reductions[itemId].indexOf(node.itemId) > -1,
-          ephemeral: node.name === 'Ephemeral',
-          items: node.items
-        };
-        const folklore = Object.keys(folklores).find(id => folklores[id].indexOf(itemId) > -1);
-        if (folklore !== undefined) {
-          result.folklore = {
-            id: +folklore,
-            icon: [7012, 7012, 7127, 7127, 7128, 7128][node.type]
-          };
-        }
-        return result;
-      });
-    const results = [...nodesFromPositions, ...nodesFromGarlandBell];
-    const finalNodes = [];
-    results
-      .sort((a, b) => {
-        if (a.ephemeral && !b.ephemeral) {
-          return -1;
-        } else if (b.ephemeral && !a.ephemeral) {
-          return 1;
-        }
-        return 0;
-      })
-      .forEach(row => {
-        if (!finalNodes.some(node => node.nodeId)) {
-          finalNodes.push(row);
-        }
-      });
-    return finalNodes.slice(0, 3);
-  }
-
-  private _getDohPageName(page: any): string {
-    if (page.masterbook > 0) {
-      const masterbookIndex = this.getMasterbookIndex(page);
-      if (masterbookIndex === -7) {
-        return this.translate.instant('LOG_TRACKER.PAGE.Other_master_recipes');
-      }
-      const masterbookNumber = Math.floor((page.id - 1000) / 8) + 1;
-      return `${this.translate.instant('LOG_TRACKER.PAGE.Master_recipes', { number: masterbookNumber })}`;
-    }
-    if (page.id > 1063 && page.id < 1080) {
-      return `${this.translate.instant('LOG_TRACKER.PAGE.Housing_items', { number: page.id < 1072 ? 1 : 2 })}`;
-    }
-    if (page.id >= 1088 && page.id <= 1095) {
-      return this.translate.instant('LOG_TRACKER.PAGE.Quests');
-    }
-    if (page.id >= 1096) {
-      return this.translate.instant('LOG_TRACKER.PAGE.Deliveries');
-    }
-    if (page.startLevel.ClassJobLevel === 50) {
-      return this.translate.instant('LOG_TRACKER.PAGE.Others');
-    }
-    if (page.startLevel.ClassJobLevel === 30) {
-      return this.translate.instant('LOG_TRACKER.PAGE.Dyes');
-    }
-    return `${page.startLevel.ClassJobLevel} - ${page.startLevel.ClassJobLevel + 4}`;
-  }
-
-  private _getDolPageName(page: any): string {
-    if (page.id === 9999) {
-      return this.translate.instant('LOG_TRACKER.Folklore');
-    }
-    if (page.id === 47) {
-      return `36-40`;
-    }
-    return `${Math.floor(page.startLevel / 5) * 5 + 1} - ${Math.floor((page.startLevel + 4) / 5) * 5}`;
-  }
-
-  private getMasterbookIndex(page: any): number {
-    const baseValue = ((page.startLevel.ClassJobLevel - 50) / 5) + page.startLevel.Stars / 2;
-    if (baseValue === 1.6) {
-      return 3;
-    }
-    if (baseValue > 2) {
-      return baseValue + 1;
-    }
-    return baseValue;
   }
 
   public showOptimizedMap(index: number): void {
@@ -389,13 +282,13 @@ export class LogTrackerComponent extends TrackerComponent {
             const nodes = this.getNodeData(item.itemId, page.id);
             return !this.userGatheringCompletion[item.itemId]
               && nodes.length > 0
-              && nodes.some(n => !n.timed);
+              && nodes.some(n => !n.gatheringNode.limited);
           })
           .map(item => {
-            const node = this.getNodeData(item.itemId, page.id)[0];
+            const node = this.getNodeData(item.itemId, page.id)[0].gatheringNode;
             return <NavigationObjective>{
-              mapId: node.mapId,
-              zoneId: node.zoneid,
+              mapId: node.map,
+              zoneId: node.zoneId,
               iconid: null,
               item_amount: 1,
               name: this.l12n.getItem(item.itemId),
@@ -403,7 +296,8 @@ export class LogTrackerComponent extends TrackerComponent {
               total_item_amount: 1,
               type: 'Gathering',
               x: node.x,
-              y: node.y
+              y: node.y,
+              gatheringType: node.type
             };
           });
       })

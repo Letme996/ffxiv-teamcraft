@@ -1,4 +1,4 @@
-import { Component, HostListener, Inject, Injector, OnInit, PLATFORM_ID, Renderer2 } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, Inject, Injector, OnInit, PLATFORM_ID, Renderer2 } from '@angular/core';
 import { environment } from '../environments/environment';
 import { GarlandToolsService } from './core/api/garland-tools.service';
 import { TranslateService } from '@ngx-translate/core';
@@ -7,11 +7,13 @@ import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Rout
 import { faDiscord, faGithub, faTwitter } from '@fortawesome/fontawesome-free-brands';
 import { faBell, faCalculator, faGavel, faMap } from '@fortawesome/fontawesome-free-solid';
 import fontawesome from '@fortawesome/fontawesome';
-import { buffer, catchError, debounceTime, delay, distinctUntilChanged, filter, first, map, shareReplay, startWith, switchMap, tap } from 'rxjs/operators';
+import { catchError, delay, distinctUntilChanged, filter, first, map, mapTo, shareReplay, startWith, switchMap, tap } from 'rxjs/operators';
 import { Observable } from 'rxjs/Observable';
 import { AuthFacade } from './+state/auth.facade';
 import { Character } from '@xivapi/angular-client';
-import { NzIconService, NzMessageService, NzModalService } from 'ng-zorro-antd';
+import { NzIconService } from 'ng-zorro-antd/icon';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { RegisterPopupComponent } from './core/auth/register-popup/register-popup.component';
 import { LoginPopupComponent } from './core/auth/login-popup/login-popup.component';
 import { EorzeanTimeService } from './core/eorzea/eorzean-time.service';
@@ -25,9 +27,9 @@ import { AbstractNotification } from './core/notification/abstract-notification'
 import { RotationsFacade } from './modules/rotations/+state/rotations.facade';
 import { PlatformService } from './core/tools/platform.service';
 import { SettingsPopupService } from './modules/settings/settings-popup.service';
-import { BehaviorSubject, fromEvent, interval, of } from 'rxjs';
+import { BehaviorSubject, combineLatest, fromEvent, of, Subject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
+import { DomSanitizer } from '@angular/platform-browser';
 import { CustomLinksFacade } from './modules/custom-links/+state/custom-links.facade';
 import { MediaObserver } from '@angular/flex-layout';
 import { LayoutsFacade } from './core/layout/+state/layouts.facade';
@@ -39,15 +41,21 @@ import { Theme } from './modules/settings/theme';
 import { isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { REQUEST } from '@nguniversal/express-engine/tokens';
 import * as semver from 'semver';
-import { MachinaService } from './core/electron/machina.service';
 import { UniversalisService } from './core/api/universalis.service';
-import { GubalService } from './core/api/gubal.service';
 import { InventoryFacade } from './modules/inventory/+state/inventory.facade';
 import { TextQuestionPopupComponent } from './modules/text-question-popup/text-question-popup/text-question-popup.component';
 import { Apollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular-link-http';
 import { InMemoryCache } from 'apollo-cache-inmemory';
 import { QuickSearchService } from './modules/quick-search/quick-search.service';
+import { Region } from './modules/settings/region.enum';
+import { MappyReporterService } from './core/electron/mappy/mappy-reporter';
+import { TutorialService } from './core/tutorial/tutorial.service';
+import { ChangelogPopupComponent } from './modules/changelog-popup/changelog-popup/changelog-popup.component';
+import { version } from '../environments/version';
+import { PlayerMetricsService } from './modules/player-metrics/player-metrics.service';
+import { PatreonService } from './core/patreon/patreon.service';
+import { UpdaterStatus } from './model/other/updater-status';
 
 declare const gtag: Function;
 
@@ -64,17 +72,13 @@ export class AppComponent implements OnInit {
 
   version = environment.version;
 
-  public overlay = false;
-
-  public windowDecorator = false;
+  public get overlay() {
+    return window.location.href.indexOf('?overlay') > -1;
+  }
 
   public overlayOpacity = 1;
 
-  collapsedSidebar = this.media.isActive('lt-md') ? true : this.settings.compactSidebar;
-
   collapsedAlarmsBar = true;
-
-  sidebarState = this.settings.sidebarState;
 
   public notifications$ = this.notificationsFacade.notificationsDisplay$.pipe(
     isPlatformServer(this.platform) ? first() : tap()
@@ -82,7 +86,9 @@ export class AppComponent implements OnInit {
 
   public loggedIn$: Observable<boolean>;
 
-  public character$: Observable<Character>;
+  public character$: Observable<Character & { Datacenter: string }>;
+
+  public otherCharacters$: Observable<Character[]>;
 
   public userId$ = this.authFacade.userId$.pipe(
     isPlatformServer(this.platform) ? first() : tap()
@@ -108,64 +114,50 @@ export class AppComponent implements OnInit {
 
   public newVersionAvailable$: Observable<boolean>;
 
+  public updateVersion$: Observable<string>;
+
+  public pcapOutDated$: Observable<boolean>;
+
   public dataLoaded = false;
 
   public showGiveaway = false;
 
   private dirty = false;
 
-  public downloading: any;
-
-  public checkingForUpdate = false;
+  UpdaterStatus = UpdaterStatus;
+  public checkingForUpdate$ = new BehaviorSubject<number>(UpdaterStatus.NO_UPDATE);
 
   public emptyInventory$: Observable<boolean>;
 
+  public unknownContentId$: Observable<boolean>;
+
   public pinnedList$ = this.listsFacade.pinnedList$;
 
-  public randomTip$: Observable<string> = interval(600000).pipe(
-    startWith(-1),
-    map(() => {
-      const tips = [
-        'Community_rotations',
-        'GC_Deliveries',
-        'Desynth',
-        'DB',
-        '3D_model',
-        'Levequests',
-        'Log_tracker',
-        'Desktop_app_overlay',
-        'Start_desktop_before_game'
-      ];
-      return tips[Math.floor(Math.random() * tips.length)];
-    }),
-    isPlatformServer(this.platform) ? first() : tap()
-  );
+  public suggestedRegion: Region = null;
 
-  get desktopUrl(): SafeUrl {
-    return this.sanitizer.bypassSecurityTrustUrl(`teamcraft://${window.location.pathname}`);
-  }
+  public possibleMissingFirewallRule$ = this.ipc.possibleMissingFirewallRule$;
+
+  public firewallRuleApplied = false;
 
   constructor(private gt: GarlandToolsService, public translate: TranslateService,
-              private ipc: IpcService, private router: Router, private firebase: AngularFireDatabase,
+              public ipc: IpcService, private router: Router, private firebase: AngularFireDatabase,
               private authFacade: AuthFacade, private dialog: NzModalService, private eorzeanTime: EorzeanTimeService,
-              private listsFacade: ListsFacade, private workshopsFacade: WorkshopsFacade, public settings: SettingsService,
+              public listsFacade: ListsFacade, private workshopsFacade: WorkshopsFacade, public settings: SettingsService,
               public teamsFacade: TeamsFacade, private notificationsFacade: NotificationsFacade,
               private iconService: NzIconService, private rotationsFacade: RotationsFacade, public platformService: PlatformService,
               private settingsPopupService: SettingsPopupService, private http: HttpClient, private sanitizer: DomSanitizer,
               private customLinksFacade: CustomLinksFacade, private renderer: Renderer2, private media: MediaObserver,
               private layoutsFacade: LayoutsFacade, private lazyData: LazyDataService, private customItemsFacade: CustomItemsFacade,
               private dirtyFacade: DirtyFacade, private seoService: SeoService, private injector: Injector,
-              private machina: MachinaService, private message: NzMessageService, private universalis: UniversalisService,
-              private inventoryService: InventoryFacade, private gubal: GubalService, @Inject(PLATFORM_ID) private platform: Object,
-              private quickSearch: QuickSearchService, apollo: Apollo, httpLink: HttpLink) {
+              private message: NzMessageService, private universalis: UniversalisService,
+              private inventoryService: InventoryFacade, @Inject(PLATFORM_ID) private platform: Object,
+              private quickSearch: QuickSearchService, public mappy: MappyReporterService,
+              apollo: Apollo, httpLink: HttpLink, private tutorialService: TutorialService,
+              private playerMetricsService: PlayerMetricsService, private patreonService: PatreonService,
+              private cd: ChangeDetectorRef) {
 
-
-    fromEvent(document, 'keypress').pipe(
-      filter((event: KeyboardEvent) => {
-        return event.ctrlKey && event.shiftKey && event.code === 'KeyF';
-      })
-    ).subscribe(() => {
-      this.quickSearch.openQuickSearch();
+    fromEvent(document, 'keydown').subscribe((event: KeyboardEvent) => {
+      this.handleKeypressShortcuts(event);
     });
 
     const link = httpLink.create({ uri: 'https://us-central1-ffxivteamcraft.cloudfunctions.net/gubal-proxy' });
@@ -204,15 +196,19 @@ export class AppComponent implements OnInit {
     if (isPlatformServer(this.platform)) {
       this.dataLoaded = true;
       this.emptyInventory$ = of(false);
+      this.unknownContentId$ = of(false);
     }
 
     if (isPlatformBrowser(this.platform)) {
       if (this.platformService.isDesktop()) {
-        this.machina.init();
-        this.gubal.init();
         this.emptyInventory$ = this.inventoryService.inventory$.pipe(
           map(inventory => {
-            return Object.keys(inventory.items).length === 0;
+            return inventory.contentId && Object.keys(inventory.items[inventory.contentId]).length === 0;
+          })
+        );
+        this.unknownContentId$ = this.inventoryService.inventory$.pipe(
+          map(inventory => {
+            return inventory.contentId === undefined;
           })
         );
         this.universalis.initCapture();
@@ -235,19 +231,93 @@ export class AppComponent implements OnInit {
         .pipe(
           isPlatformServer(this.platform) ? first() : tap()
         )
-        .subscribe(version => {
-          if (semver.ltr(environment.version, version)) {
+        .subscribe(v => {
+          if (semver.ltr(environment.version, v)) {
             this.router.navigate(['version-lock']);
           }
         });
 
-      this.lazyData.loaded$.subscribe(loaded => this.dataLoaded = loaded);
+      this.lazyData.loaded$
+        .pipe(
+          switchMap((loaded) => {
+            this.dataLoaded = loaded;
+            if (!loaded) {
+              return of(false);
+            }
+            const lastChangesSeen = this.settings.lastChangesSeen;
+            if (this.settings.autoShowPatchNotes && semver.gt(version, lastChangesSeen) && !this.overlay) {
+              return this.showPatchNotes();
+            } else {
+              return of(null);
+            }
+          })
+        )
+        .subscribe((loaded) => {
+          if (loaded) {
+            this.tutorialService.applicationReady();
+          }
+        });
 
-      this.newVersionAvailable$ = this.firebase.object('app_version').valueChanges().pipe(
-        map((value: string) => {
-          return semver.ltr(environment.version, value);
+      this.updateVersion$ = this.firebase.object<string>('app_version').valueChanges();
+
+      this.newVersionAvailable$ = this.updateVersion$
+        .pipe(
+          map((value: string) => {
+            return semver.ltr(environment.version, value);
+          }),
+          tap(update => {
+            if (update && this.settings.autoDownloadUpdate) {
+              this.updateDesktopApp();
+            } else {
+              this.checkingForUpdate$.next(UpdaterStatus.UPDATE_AVAILABLE);
+            }
+          })
+        );
+
+      const language$ = this.translate.onLangChange.pipe(
+        map(event => event.lang),
+        startWith(this.translate.currentLang)
+      );
+
+      const region$ = this.settings.regionChange$.pipe(
+        map(change => change.next),
+        startWith(this.settings.region)
+      );
+
+      this.pcapOutDated$ = combineLatest([region$, this.firebase.object('game_versions').valueChanges()]).pipe(
+        map(([region, value]) => {
+          let key: string;
+          switch (region) {
+            case Region.Korea:
+              key = 'koreanGameVersion';
+              break;
+            case Region.China:
+              key = 'chineseGameVersion';
+              break;
+            default:
+              key = 'globalGameVersion';
+              break;
+          }
+          return value[key] > environment[key];
         })
       );
+
+      combineLatest([language$, region$]).subscribe(([lang, region]) => {
+        let suggestedRegion;
+        switch (lang) {
+          case 'ko':
+            suggestedRegion = Region.Korea;
+            break;
+          case 'zh':
+            suggestedRegion = Region.China;
+            break;
+          default:
+            suggestedRegion = Region.Global;
+            break;
+        }
+
+        this.suggestedRegion = region === suggestedRegion ? null : suggestedRegion;
+      });
 
       this.dirtyFacade.hasEntries$.subscribe(dirty => this.dirty = dirty);
 
@@ -267,7 +337,7 @@ export class AppComponent implements OnInit {
         }
       });
 
-      // Google Analytics
+      // Google Analytics & patreon popup stuff
       router.events
         .pipe(
           distinctUntilChanged((previous: any, current: any) => {
@@ -277,12 +347,9 @@ export class AppComponent implements OnInit {
             return true;
           })
         ).subscribe((event: any) => {
+        this.tutorialService.reset();
         this.seoService.resetConfig();
-        this.overlay = event.url.indexOf('?overlay') > -1;
         this.ipc.send('navigated', event.url);
-        this.ipc.on('window-decorator', (e, value) => {
-          this.windowDecorator = value;
-        });
         if (this.overlay) {
           this.ipc.on(`overlay:${this.ipc.overlayUri}:opacity`, (e, value) => {
             this.overlayOpacity = value;
@@ -294,7 +361,9 @@ export class AppComponent implements OnInit {
           this.use(event.url.substr(languageIndex + 6, 2), false, true);
         }
         gtag('set', 'page', event.url);
-        gtag('send', 'pageview');
+        gtag('event', 'page_view', {
+          page_path: event.urlAfterRedirects
+        });
       });
 
       // Custom protocol detection
@@ -341,27 +410,92 @@ export class AppComponent implements OnInit {
       this.ipc.on('apply-language', (e, newLang) => {
         this.use(newLang, true);
       });
-      this.ipc.on('download-progress', (event, progress: any) => {
-        this.checkingForUpdate = false;
-        this.downloading = progress;
-      });
+      if (!this.overlay) {
+        this.lazyData.data$
+          .pipe(
+            filter(data => data !== undefined),
+            first()
+          )
+          .subscribe(() => {
+            if (this.settings.xivapiKey && this.settings.enableMappy) {
+              this.mappy.start();
+            }
+            this.playerMetricsService.start();
+            setTimeout(() => {
+              this.ipc.send('app-ready', true);
+              this.cd.detectChanges();
+            }, 500);
+          });
+      }
     }
 
     fontawesome.library.add(faDiscord, faTwitter, faGithub, faCalculator, faBell, faMap, faGavel);
   }
 
+  private handleKeypressShortcuts(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && [187, 107].includes(event.keyCode)) {
+      return this.ipc.send('zoom-in');
+    }
+    if ((event.ctrlKey || event.metaKey) && [54, 109].includes(event.keyCode)) {
+      return this.ipc.send('zoom-out');
+    }
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'F') {
+      this.quickSearch.openQuickSearch();
+    } else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'A') {
+      this.router.navigateByUrl('/admin/users');
+    } else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'M') {
+      this.router.navigateByUrl('/mappy');
+    } else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'C') {
+      event.preventDefault();
+      event.stopPropagation();
+      if (this.platformService.isDesktop()) {
+        this.openLink();
+      } else {
+        this.openInApp();
+      }
+    }
+  }
+
   enablePacketCapture(): void {
-    this.ipc.machinaToggle = true;
+    this.ipc.machinaToggle$.next(true);
     this.settings.enableUniversalisSourcing = true;
     this.ipc.send('toggle-machina', true);
   }
 
-  getPathname(): string {
-    return this.router.url;
+  applyFirewallRule(): void {
+    this.ipc.once('machina:firewall:rule-set', () => {
+      this.firewallRuleApplied = true;
+      this.message.success(this.translate.instant('PACKET_CAPTURE.Firewall_rule_set'));
+    });
+    this.ipc.send('machina:firewall:set-rule');
   }
 
-  afterPathNameCopy(): void {
-    this.message.success(this.translate.instant('Path_copied_to_clipboard'));
+  showPatchNotes(): Observable<any> {
+    const res$ = new Subject();
+    this.dialog.create({
+      nzTitle: this.translate.instant('Patch_notes', { version: environment.version }),
+      nzContent: ChangelogPopupComponent,
+      nzFooter: null,
+      nzStyle: {
+        'z-index': 10000
+      }
+    }).afterClose
+      .pipe(
+        tap(() => {
+          this.settings.lastChangesSeen = version;
+        })
+      ).subscribe(() => res$.next());
+    return res$;
+  }
+
+  changeToSuggestedRegion(): void {
+    if (!this.suggestedRegion) return;
+
+    this.settings.region = this.suggestedRegion;
+  }
+
+  getPathname(): string {
+    return this.router.url;
   }
 
   getLang(): string {
@@ -383,7 +517,11 @@ export class AppComponent implements OnInit {
 
   updateDesktopApp(): void {
     this.ipc.send('update:check');
-    this.checkingForUpdate = true;
+    this.checkingForUpdate$.next(UpdaterStatus.DOWNLOADING);
+    // After 5 minutes, maybe there's something wrong in the update download...
+    setTimeout(() => {
+      this.checkingForUpdate$.next(UpdaterStatus.POSSIBLE_ERROR);
+    }, 300000);
   }
 
   ngOnInit(): void {
@@ -392,42 +530,78 @@ export class AppComponent implements OnInit {
       // Loading is !loaded
       this.loading$ = this.authFacade.loaded$.pipe(map(loaded => !loaded));
       this.loggedIn$ = this.authFacade.loggedIn$;
-      this.character$ = this.authFacade.mainCharacter$.pipe(shareReplay(1));
+
+      this.character$ = this.authFacade.mainCharacter$.pipe(
+        map(character => {
+          return {
+            ...character,
+            Datacenter: this.lazyData.getDataCenter(character.Server)
+          };
+        }),
+        shareReplay(1)
+      );
+
+      this.otherCharacters$ = combineLatest([this.authFacade.characters$, this.authFacade.mainCharacter$]).pipe(
+        map(([entries, mainChar]) => {
+          return entries.map(entry => entry.Character).filter(e => e.ID !== mainChar.ID);
+        })
+      );
+
       this.notificationsFacade.loadAll();
-      this.listsFacade.loadMyLists();
-      this.workshopsFacade.loadMyWorkshops();
-      this.listsFacade.loadListsWithWriteAccess();
-      this.workshopsFacade.loadWorkshopsWithWriteAccess();
-      this.teamsFacade.loadMyTeams();
-      this.rotationsFacade.loadMyRotations();
       this.customLinksFacade.loadMyCustomLinks();
-      this.layoutsFacade.loadAll();
-      this.customItemsFacade.loadAll();
+
+      let increasedPageViews = false;
 
       this.user$.subscribe(user => {
         if (!user.patron && !user.admin && this.settings.theme.name === 'CUSTOM') {
           this.settings.theme = Theme.DEFAULT;
         }
+        if (!user.patron && !increasedPageViews) {
+          const viewTriggersForPatreonPopup = [20, 200, 500];
+          this.settings.pageViews++;
+          increasedPageViews = true;
+          if (viewTriggersForPatreonPopup.indexOf(this.settings.pageViews) > -1) {
+            this.patreonService.showSupportUsPopup();
+          }
+        }
       });
-
-      if (this.media.isActive('lt-md')) {
-        this.collapsedSidebar = true;
-      }
 
       this.settings.themeChange$.subscribe((change => {
         this.applyTheme(change.next);
       }));
+
     } else {
       this.loading$ = of(false);
       this.loggedIn$ = of(false);
     }
   }
 
+  switchCharacter(id: number): void {
+    this.authFacade.setDefaultCharacter(id);
+  }
+
+  hexToRgbA(hex: string, opacity: number) {
+    let c;
+    if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+      c = hex.substring(1).split('');
+      if (c.length === 3) {
+        c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+      }
+      c = '0x' + c.join('');
+      return `rgba(${[(c >> 16) & 255, (c >> 8) & 255, c & 255].join(',')},${opacity})`;
+    }
+    throw new Error('Bad Hex');
+  }
+
   private applyTheme(theme: Theme): void {
     if (theme !== undefined) {
       document.documentElement.style.setProperty('--background-color', theme.background);
       document.documentElement.style.setProperty('--primary-color', theme.primary);
+      document.documentElement.style.setProperty('--primary-color-50', this.hexToRgbA(theme.primary, 0.50));
+      document.documentElement.style.setProperty('--primary-color-25', this.hexToRgbA(theme.primary, 0.25));
       document.documentElement.style.setProperty('--highlight-color', theme.highlight);
+      document.documentElement.style.setProperty('--highlight-color-50', this.hexToRgbA(theme.highlight, 0.50));
+      document.documentElement.style.setProperty('--highlight-color-25', this.hexToRgbA(theme.highlight, 0.25));
       document.documentElement.style.setProperty('--text-color', theme.text);
       document.documentElement.style.setProperty('--topbar-color', theme.topbar);
       document.documentElement.style.setProperty('--sider-trigger-color', theme.trigger);
@@ -443,12 +617,6 @@ export class AppComponent implements OnInit {
       this.settings.timeFormat = '24H';
     }
     this.reloadTime$.next(null);
-  }
-
-  public onNavLinkClick(): void {
-    if (this.media.isActive('lt-md')) {
-      this.collapsedSidebar = true;
-    }
   }
 
   deleteNotification(notification: AbstractNotification): void {
@@ -472,9 +640,11 @@ export class AppComponent implements OnInit {
       nzTitle: this.translate.instant('Login'),
       nzContent: LoginPopupComponent,
       nzFooter: null
-    }).afterClose.subscribe(() => {
-      // HOTFIX
-      window.location.reload();
+    }).afterClose.subscribe((res) => {
+      if (res) {
+        // HOTFIX
+        window.location.reload();
+      }
     });
   }
 
@@ -482,8 +652,18 @@ export class AppComponent implements OnInit {
     this.authFacade.logout();
   }
 
-  openedApp(): void {
+  openInApp(): void {
     if (isPlatformBrowser(this.platform)) {
+      this.http.get(`http://localhost:14500${window.location.pathname}`).pipe(
+        mapTo(true),
+        catchError(() => {
+          return of(false);
+        })
+      ).subscribe(opened => {
+        if (!opened) {
+          window.open(`teamcraft://${window.location.pathname}`);
+        }
+      });
       setTimeout(() => {
         this.hasDesktopReloader$.next(null);
       }, 30000);
@@ -504,6 +684,10 @@ export class AppComponent implements OnInit {
       });
   }
 
+  openInBrowser(url: string): void {
+    this.ipc.send('open-link', url);
+  }
+
   use(lang: string, fromIpc = false, skipStorage = false): void {
     if (this.settings.availableLocales.indexOf(lang) === -1) {
       lang = 'en';
@@ -518,6 +702,10 @@ export class AppComponent implements OnInit {
     }
   }
 
+  startTutorial(): void {
+    this.tutorialService.play(true);
+  }
+
   public back(): void {
     window.history.back();
   }
@@ -530,16 +718,8 @@ export class AppComponent implements OnInit {
     this.settingsPopupService.openSettings();
   }
 
-  public openAlarmsOverlay(): void {
-    this.ipc.openOverlay('/alarms-overlay', '/alarms-overlay');
-  }
-
-  public openFishingOverlay(): void {
-    this.ipc.openOverlay('/fishing-reporter-overlay', '/fishing-reporter-overlay');
-  }
-
-  public openListPanelOverlay(): void {
-    this.ipc.openOverlay('/list-panel-overlay', '/list-panel-overlay');
+  public openOverlay(uri: string): void {
+    this.ipc.openOverlay(uri);
   }
 
   @HostListener('window:beforeunload', ['$event'])

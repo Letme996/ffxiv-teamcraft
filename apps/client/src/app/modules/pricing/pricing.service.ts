@@ -4,6 +4,7 @@ import { Price } from './model/price';
 import { ItemAmount } from './model/item-amount';
 import { Subject } from 'rxjs';
 import { DataType } from '../list/data/data-type';
+import { LazyDataService } from '../../core/data/lazy-data.service';
 
 @Injectable()
 export class PricingService {
@@ -25,7 +26,7 @@ export class PricingService {
 
   public priceChanged$ = new Subject<void>();
 
-  constructor() {
+  constructor(private lazyData: LazyDataService) {
     this.prices = this.parsePrices(localStorage.getItem('prices'));
     this.amounts = JSON.parse(localStorage.getItem('amounts')) || {};
     this.customPrices = JSON.parse(localStorage.getItem('customPrices')) || [];
@@ -137,7 +138,8 @@ export class PricingService {
         return storedValue;
       }
     }
-    if (hq) {
+    const canBeHq = !!this.lazyData.data.hqFlags[item.id];
+    if (hq && canBeHq) {
       return { nq: 0, hq: item.amount };
     }
     return { nq: item.amount, hq: 0 };
@@ -181,6 +183,7 @@ export class PricingService {
       if (price.fromMB) {
         price.nqServer = rowData[3];
         price.hqServer = rowData[4];
+        price.updated = +(rowData[5] || 0);
       }
       result[rowId] = price;
     });
@@ -197,7 +200,7 @@ export class PricingService {
     for (const index in data) {
       if (data.hasOwnProperty(index)) {
         const entry = data[index];
-        resultString += `${index.toString()}:${entry.nq},${entry.hq},${entry.fromVendor ? 1 : 0}${entry.fromMB ? `,${entry.nqServer},${entry.hqServer}` : ''};`;
+        resultString += `${index.toString()}:${entry.nq},${entry.hq},${entry.fromVendor ? 1 : 0}${entry.fromMB ? `,${entry.nqServer},${entry.hqServer},${entry.updated}` : ''};`;
       }
     }
     return resultString;

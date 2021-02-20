@@ -1,40 +1,43 @@
 import { Injectable } from '@angular/core';
 import { Actions, Effect, ofType } from '@ngrx/effects';
 import {
+  ArchivedListsLoaded,
   ConvertLists,
   CreateList,
   DeleteList,
+  DeleteLists,
   ListDetailsLoaded,
   ListsActionTypes,
-  ListsForTeamsLoaded,
   LoadListDetails,
   LoadTeamLists,
   MyListsLoaded,
+  PureUpdateList,
   SetItemDone,
   SharedListsLoaded,
   TeamListsLoaded,
   UpdateItem,
   UpdateList,
   UpdateListAtomic,
-  UpdateListIndex
+  UpdateListIndexes
 } from './lists.actions';
 import {
   catchError,
+  debounce,
   debounceTime,
   delay,
   distinctUntilChanged,
+  exhaustMap,
   filter,
   first,
   map,
   mergeMap,
   switchMap,
   tap,
-  throttleTime,
   withLatestFrom
 } from 'rxjs/operators';
 import { AuthFacade } from '../../../+state/auth.facade';
 import { TeamcraftUser } from '../../../model/user/teamcraft-user';
-import { combineLatest, EMPTY, from, of } from 'rxjs';
+import { combineLatest, EMPTY, from, of, timer } from 'rxjs';
 import { ListsFacade } from './lists.facade';
 import { List } from '../model/list';
 import { PermissionLevel } from '../../../core/database/permissions/permission-level.enum';
@@ -42,18 +45,22 @@ import { Team } from '../../../model/team/team';
 import { TeamsFacade } from '../../teams/+state/teams.facade';
 import { DiscordWebhookService } from '../../../core/discord/discord-webhook.service';
 import { Router } from '@angular/router';
-import { NzModalService, NzNotificationService } from 'ng-zorro-antd';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { ListCompletionPopupComponent } from '../list-completion-popup/list-completion-popup.component';
 import { TranslateService } from '@ngx-translate/core';
 import { NgSerializerService } from '@kaiu/ng-serializer';
 import { FirestoreListStorage } from '../../../core/database/storage/list/firestore-list-storage';
-import { PushNotificationsService } from 'ng-push';
 import { PlatformService } from '../../../core/tools/platform.service';
 import { IpcService } from '../../../core/electron/ipc.service';
 import { SettingsService } from '../../settings/settings.service';
 import { I18nToolsService } from '../../../core/tools/i18n-tools.service';
 import { LocalizedDataService } from '../../../core/data/localized-data.service';
 import { LazyDataService } from '../../../core/data/lazy-data.service';
+import { onlyIfNotConnected } from '../../../core/rxjs/only-if-not-connected';
+import { DirtyFacade } from '../../../core/dirty/+state/dirty.facade';
+import { DirtyScope } from '../../../core/dirty/dirty-scope';
+import { CommissionService } from '../../commission-board/commission.service';
 
 @Injectable()
 export class ListsEffects {
@@ -63,13 +70,34 @@ export class ListsEffects {
     ofType(ListsActionTypes.LoadMyLists),
     switchMap(() => this.authFacade.userId$),
     distinctUntilChanged(),
-    switchMap((userId) => {
+    exhaustMap((userId) => {
       this.localStore = this.serializer.deserialize<List>(JSON.parse(localStorage.getItem('offline-lists') || '[]'), [List]);
       this.localStore.forEach(list => list.afterDeserialized());
       this.listsFacade.offlineListsLoaded(this.localStore);
-      return this.listService.getByForeignKey(TeamcraftUser, userId)
+      return this.listService.getByForeignKey(TeamcraftUser, userId, query => query.where('archived', '==', false))
         .pipe(
+          debounceTime(100),
+          tap(lists => {
+            lists.forEach(list => {
+              if (!list.name) {
+                this.listsFacade.deleteList(list.$key, false);
+              }
+            });
+          }),
           map(lists => new MyListsLoaded(lists, userId))
+        );
+    })
+  );
+
+  @Effect()
+  loadArchivedLists$ = this.actions$.pipe(
+    ofType(ListsActionTypes.LoadArchivedLists),
+    switchMap(() => this.authFacade.userId$),
+    distinctUntilChanged(),
+    exhaustMap((userId) => {
+      return this.listService.getByForeignKey(TeamcraftUser, userId, query => query.where('archived', '==', true), ':archived')
+        .pipe(
+          map(lists => new ArchivedListsLoaded(lists, userId))
         );
     })
   );
@@ -77,6 +105,9 @@ export class ListsEffects {
   @Effect()
   loadTeamLists$ = this.actions$.pipe(
     ofType<LoadTeamLists>(ListsActionTypes.LoadTeamLists),
+    withLatestFrom(this.listsFacade.connectedTeams$),
+    filter(([action, teams]) => teams.indexOf(action.teamId) === -1),
+    map(([action]) => action),
     mergeMap((action) => {
       return this.listService.getByForeignKey(Team, action.teamId)
         .pipe(
@@ -86,7 +117,7 @@ export class ListsEffects {
   );
 
   @Effect()
-  loadListsWithWriteAccess$ = this.actions$.pipe(
+  loadSharedLists$ = this.actions$.pipe(
     ofType(ListsActionTypes.LoadSharedLists),
     first(),
     switchMap(() => combineLatest([this.authFacade.user$, this.authFacade.fcId$])),
@@ -119,21 +150,10 @@ export class ListsEffects {
   );
 
   @Effect()
-  loadListsForTeam$ = this.teamsFacade.myTeams$.pipe(
-    switchMap((teams) => {
-      return combineLatest(teams.map(team => this.listService.getByForeignKey(Team, team.$key)));
-    }),
-    map(listsArrays => [].concat.apply([], ...listsArrays)),
-    map(lists => new ListsForTeamsLoaded(lists))
-  );
-
-  @Effect()
   loadListDetails$ = this.actions$.pipe(
     ofType<LoadListDetails>(ListsActionTypes.LoadListDetails),
     filter(action => !/^offline\d+$/.test(action.key)),
-    withLatestFrom(this.listsFacade.allListDetails$),
-    filter(([action, allLists]) => allLists.find(list => list.$key === action.key) === undefined),
-    map(([action]) => action),
+    onlyIfNotConnected(this.listsFacade.allListDetails$, action => action.key),
     mergeMap((action: LoadListDetails) => {
       return this.authFacade.loggedIn$.pipe(
         switchMap(loggedIn => {
@@ -156,7 +176,7 @@ export class ListsEffects {
           fcId = null;
         }
       }
-      if (list !== null) {
+      if (list !== null && !list.notFound) {
         const permissionLevel = Math.max(list.getPermissionLevel(userId), list.getPermissionLevel(fcId), (team !== undefined && list.teamId === team.$key) ? 20 : 0);
         if (permissionLevel >= PermissionLevel.READ) {
           return [listKey, list];
@@ -189,14 +209,39 @@ export class ListsEffects {
   );
 
   @Effect()
-  persistUpdateListIndex$ = this.actions$.pipe(
-    ofType<UpdateListIndex>(ListsActionTypes.UpdateListIndex),
+  persistUpdateListIndexes$ = this.actions$.pipe(
+    ofType<UpdateListIndexes>(ListsActionTypes.UpdateListIndexes),
     mergeMap(action => {
-      if (action.payload.offline) {
-        this.saveToLocalstorage(action.payload, false);
+      const todo = action.lists.reduce((acc, list) => {
+        if (list.offline) {
+          acc.offline.push(list);
+        } else {
+          acc.online.push(list);
+        }
+        return acc;
+      }, { offline: [], online: [] });
+      todo.offline.forEach(list => {
+        this.saveToLocalstorage(list, false);
+      });
+      if (todo.online.length === 0) {
         return EMPTY;
       }
-      return this.listService.pureUpdate(action.payload.$key, { index: action.payload.index });
+      return this.listService.updateIndexes(todo.online);
+    }),
+    switchMap(() => EMPTY)
+  );
+
+  @Effect()
+  pureListUpdate$ = this.actions$.pipe(
+    ofType<PureUpdateList>(ListsActionTypes.PureUpdateList),
+    mergeMap(action => {
+      const localList = this.localStore.find(l => l.$key === action.$key);
+      if (localList) {
+        Object.assign(localList, action.payload);
+        this.saveToLocalstorage(localList, false);
+        return EMPTY;
+      }
+      return this.listService.pureUpdate(action.$key, action.payload);
     }),
     switchMap(() => EMPTY)
   );
@@ -215,6 +260,9 @@ export class ListsEffects {
           this.saveToLocalstorage(list, true);
           return EMPTY;
         }
+        if (list.$key) {
+          return this.listService.set(list.$key, list);
+        }
         return this.listService.add(list);
       }
     )
@@ -224,24 +272,47 @@ export class ListsEffects {
   updateListInDatabase$ = this.actions$.pipe(
     ofType<UpdateList>(ListsActionTypes.UpdateList),
     debounceTime(2000),
+    filter(action => {
+      return !action.payload.isComplete();
+    }),
     switchMap(action => {
       if (action.payload.offline) {
         this.saveToLocalstorage(action.payload, false);
         return of(null);
       }
-      return this.listService.set(action.payload.$key, action.payload);
+      if (action.payload.hasCommission) {
+        this.updateCommission(action.payload);
+      }
+      return this.listService.update(action.payload.$key, action.payload);
     })
   );
 
   @Effect({ dispatch: false })
   atomicListUpdate = this.actions$.pipe(
     ofType<UpdateListAtomic>(ListsActionTypes.UpdateListAtomic),
+    tap((action) => {
+      this.dirtyFacade.addEntry(`UpdateListAtomic:${action.payload.$key}`, DirtyScope.APP);
+    }),
+    debounce(action => action.fromPacket ? timer(5000) : timer(800)),
+    filter(action => {
+      return !(action.payload.ephemeral && action.payload.isComplete());
+    }),
     switchMap((action) => {
       if (action.payload.offline) {
         this.saveToLocalstorage(action.payload, false);
+        this.dirtyFacade.removeEntry(`UpdateListAtomic:${action.payload.$key}`, DirtyScope.APP);
         return of(null);
       }
-      return this.listService.update(action.payload.$key, action.payload);
+      return this.listService.update(action.payload.$key, action.payload).pipe(
+        catchError(e => {
+          console.error('Error while saving list update');
+          console.error(e);
+          return of(null);
+        }),
+        tap(() => {
+          this.dirtyFacade.removeEntry(`UpdateListAtomic:${action.payload.$key}`, DirtyScope.APP);
+        })
+      );
     })
   );
 
@@ -275,6 +346,14 @@ export class ListsEffects {
     })
   );
 
+  @Effect({ dispatch: false })
+  deleteListsFromDatabase$ = this.actions$.pipe(
+    ofType<DeleteLists>(ListsActionTypes.DeleteLists),
+    switchMap(({ keys }) => {
+      return this.listService.removeMany(keys);
+    })
+  );
+
   @Effect()
   updateItemDone$ = this.actions$.pipe(
     ofType<SetItemDone>(ListsActionTypes.SetItemDone),
@@ -284,10 +363,14 @@ export class ListsEffects {
       this.authFacade.fcId$,
       this.listsFacade.autocompleteEnabled$,
       this.listsFacade.completionNotificationEnabled$),
-    filter(([action, list, , , , autofillEnabled, completionNotificationEnabled]) => {
+    filter(([action, list, , , , autofillEnabled, _]) => {
       const item = list.getItemById(action.itemId, !action.finalItem, action.finalItem);
-      if (autofillEnabled && this.settings.enableAutofillHQFilter && (list as List).requiredAsHQ(item) > 0) {
+      const requiredHq = list.requiredAsHQ(item) > 0;
+      if (autofillEnabled && this.settings.enableAutofillHQFilter && requiredHq) {
         return !action.fromPacket || action.hq;
+      }
+      if (autofillEnabled && this.settings.enableAutofillNQFilter && !requiredHq) {
+        return !action.fromPacket || !action.hq;
       }
       return true;
     }),
@@ -341,6 +424,9 @@ export class ListsEffects {
     map(([action, list]: [SetItemDone, List]) => {
       list.setDone(action.itemId, action.doneDelta, !action.finalItem, action.finalItem, false, action.recipeId, action.external);
       list.updateAllStatuses(action.itemId);
+      if (list.hasCommission) {
+        this.updateCommission(list);
+      }
       if (this.settings.autoMarkAsCompleted && action.doneDelta > 0) {
         if (action.recipeId) {
           this.markAsDoneInDoHLog(+(action.recipeId));
@@ -348,7 +434,7 @@ export class ListsEffects {
           this.markAsDoneInDoLLog(action.itemId);
         }
       }
-      return new UpdateListAtomic(list);
+      return new UpdateListAtomic(list, action.fromPacket);
     })
   );
 
@@ -370,6 +456,9 @@ export class ListsEffects {
       const updatedItems = items.map(item => item.id === action.item.id ? action.item : item);
       if (action.finalItem) {
         list.finalItems = updatedItems;
+        if (list.hasCommission) {
+          this.updateCommission(list);
+        }
       } else {
         list.items = updatedItems;
       }
@@ -385,15 +474,18 @@ export class ListsEffects {
     filter(([action, list, userId]) => {
       return !list.ephemeral && list.authorId === userId && list.isComplete();
     }),
+    debounceTime(2000),
     tap(([, list]) => {
-      this.dialog.create({
-        nzTitle: this.translate.instant('LIST.COMPLETION_POPUP.Title'),
-        nzFooter: null,
-        nzContent: ListCompletionPopupComponent,
-        nzComponentParams: {
-          list: list
-        }
-      });
+      if (!list.hasCommission) {
+        this.dialog.create({
+          nzTitle: this.translate.instant('LIST.COMPLETION_POPUP.Title'),
+          nzFooter: null,
+          nzContent: ListCompletionPopupComponent,
+          nzComponentParams: {
+            list: list
+          }
+        });
+      }
     }),
     switchMap(() => EMPTY)
   );
@@ -411,29 +503,37 @@ export class ListsEffects {
     private translate: TranslateService,
     private discordWebhookService: DiscordWebhookService,
     private serializer: NgSerializerService,
-    private pushNotificationsService: PushNotificationsService,
     private notificationService: NzNotificationService,
     private platform: PlatformService,
     private ipc: IpcService,
     private settings: SettingsService,
     private i18n: I18nToolsService,
     private l12n: LocalizedDataService,
-    private lazyData: LazyDataService
+    private lazyData: LazyDataService,
+    private dirtyFacade: DirtyFacade,
+    private commissionService: CommissionService
   ) {
   }
 
+  private updateCommission(list: List): void {
+    this.commissionService.pureUpdate(list.$key, {
+      materialsProgression: this.listsFacade.buildProgression(list.items),
+      itemsProgression: this.listsFacade.buildProgression(list.finalItems),
+      items: list.finalItems.map(item => ({
+        id: item.id,
+        amount: item.amount,
+        done: item.done
+      })),
+      totalItems: list.finalItems.reduce((acc, item) => acc + item.amount, 0)
+    }).subscribe();
+  }
+
   private markAsDoneInDoHLog(recipeId: number): void {
-    this.authFacade.user$.pipe(first()).subscribe(user => {
-      user.logProgression.push(recipeId);
-      this.authFacade.updateUser(user);
-    });
+    this.authFacade.markAsDoneInLog('crafting', recipeId, true);
   }
 
   private markAsDoneInDoLLog(itemId: number): void {
-    this.authFacade.user$.pipe(first()).subscribe(user => {
-      user.gatheringLogProgression.push(itemId);
-      this.authFacade.updateUser(user);
-    });
+    this.authFacade.markAsDoneInLog('gathering', itemId, true);
   }
 
   private saveToLocalstorage(list: List, newList: boolean): void {

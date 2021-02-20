@@ -2,7 +2,8 @@ import { Component, TemplateRef, ViewChild } from '@angular/core';
 import { CustomItem } from '../../../modules/custom-items/model/custom-item';
 import { combineLatest, Observable } from 'rxjs';
 import { CustomItemsFacade } from '../../../modules/custom-items/+state/custom-items.facade';
-import { NzModalService, NzNotificationService } from 'ng-zorro-antd';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { NameQuestionPopupComponent } from '../../../modules/name-question-popup/name-question-popup/name-question-popup.component';
 import { filter, first, map, mergeMap, shareReplay, tap } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
@@ -45,7 +46,7 @@ export class CustomItemsComponent {
 
   public display$: Observable<CustomItemsDisplay> = this.customItemsFacade.customItemsDisplay$;
 
-  public loading$: Observable<boolean> = combineLatest(this.customItemsFacade.loaded$, this.customItemsFacade.foldersLoaded$).pipe(
+  public loading$: Observable<boolean> = combineLatest([this.customItemsFacade.loaded$, this.customItemsFacade.foldersLoaded$]).pipe(
     map(([itemsLoaded, foldersLoaded]) => !itemsLoaded || !foldersLoaded)
   );
 
@@ -227,9 +228,7 @@ export class CustomItemsComponent {
 
   private beforeSave(item: CustomItem): CustomItem {
     if (getItemSource(item, DataType.GATHERED_BY, true).type !== undefined) {
-      getItemSource(item, DataType.GATHERED_BY, true).icon = NodeTypeIconPipe.icons[getItemSource(item, DataType.GATHERED_BY, true).type];
-      getItemSource(item, DataType.GATHERED_BY, true).nodes[0].zoneid = getItemSource(item, DataType.GATHERED_BY, true).nodes[0].mapid;
-      getItemSource(item, DataType.GATHERED_BY, true).nodes[0].areaid = getItemSource(item, DataType.GATHERED_BY, true).nodes[0].mapid;
+      getItemSource(item, DataType.GATHERED_BY, true).nodes[0].zoneId = getItemSource(item, DataType.GATHERED_BY, true).nodes[0].map;
       getItemSource(item, DataType.GATHERED_BY, true).nodes[0].level = getItemSource(item, DataType.GATHERED_BY, true).level;
     }
     if (getItemSource(item, DataType.VENDORS).length > 0) {
@@ -273,7 +272,7 @@ export class CustomItemsComponent {
   public addToList(item: CustomItem, amount: string): void {
     this.listPicker.pickList().pipe(
       mergeMap(list => {
-        return this.progressService.showProgress(this.listManager.addToList(item.$key, list, '', +amount),
+        return this.progressService.showProgress(this.listManager.addToList({ itemId: item.$key, list: list, recipeId: '', amount: +amount }),
           1,
           'Adding_recipes',
           { amount: 1, listname: list.name });
@@ -282,7 +281,7 @@ export class CustomItemsComponent {
       mergeMap(list => {
         // We want to get the list created before calling it a success, let's be pessimistic !
         return this.progressService.showProgress(
-          combineLatest(this.listsFacade.myLists$, this.listsFacade.listsWithWriteAccess$).pipe(
+          combineLatest([this.listsFacade.myLists$, this.listsFacade.listsWithWriteAccess$]).pipe(
             map(([myLists, listsICanWrite]) => [...myLists, ...listsICanWrite]),
             map(lists => lists.find(l => l.createdAt.toMillis() === list.createdAt.toMillis() && l.$key !== undefined)),
             filter(l => l !== undefined),
@@ -442,9 +441,9 @@ export class CustomItemsComponent {
     if (getItemSource(item, DataType.GATHERED_BY, true).type !== undefined) {
       componentParams = {
         ...componentParams,
-        x: getItemSource(item, DataType.GATHERED_BY, true).nodes[0].coords[0],
-        y: getItemSource(item, DataType.GATHERED_BY, true).nodes[0].coords[1],
-        mapId: getItemSource(item, DataType.GATHERED_BY, true).nodes[0].mapid,
+        x: getItemSource(item, DataType.GATHERED_BY, true).nodes[0].x,
+        y: getItemSource(item, DataType.GATHERED_BY, true).nodes[0].y,
+        mapId: getItemSource(item, DataType.GATHERED_BY, true).nodes[0].map,
         type: getItemSource(item, DataType.GATHERED_BY, true).type
       };
     }
@@ -478,7 +477,6 @@ export class CustomItemsComponent {
         y: alarm.coords.y,
         type: alarm.type,
         mapId: alarm.mapId,
-        slot: alarm.slot,
         name: alarm.name
       }
     }).afterClose
@@ -656,19 +654,13 @@ export class CustomItemsComponent {
       )
       .subscribe((res: SearchResult) => {
         const reducedFrom = getItemSource(item, DataType.REDUCED_FROM);
-        const data = {
-          obj: {
-            i: res.itemId,
-            c: res.icon
-          }
-        };
         if (reducedFrom.length === 0) {
           item.sources.push({
             type: DataType.REDUCED_FROM,
-            data: data
+            data: [+res.itemId]
           });
         } else {
-          reducedFrom.data.push(data);
+          reducedFrom.push(+res.itemId);
         }
         item.dirty = true;
       });

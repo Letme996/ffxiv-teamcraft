@@ -3,9 +3,12 @@ import { EorzeaAction, EorzeaActionTypes } from './eorzea.actions';
 export const EORZEA_FEATURE_KEY = 'eorzea';
 
 export interface EorzeaState {
-  zoneId: number,
-  baitId: number,
-  statuses: number[]
+  zoneId: number;
+  mapId: number;
+  baitId: number;
+  pcapWeather: number;
+  previousPcapWeather: number;
+  statuses: number[];
 }
 
 export interface EorzeaPartialState {
@@ -14,7 +17,10 @@ export interface EorzeaPartialState {
 
 export const initialState: EorzeaState = {
   zoneId: 0,
+  mapId: 0,
   baitId: 0,
+  pcapWeather: null,
+  previousPcapWeather: 0,
   statuses: []
 };
 
@@ -27,6 +33,13 @@ export function eorzeaReducer(
       state = {
         ...state,
         zoneId: action.payload
+      };
+      break;
+    }
+    case EorzeaActionTypes.SetMap: {
+      state = {
+        ...state,
+        mapId: action.payload
       };
       break;
     }
@@ -60,6 +73,14 @@ export function eorzeaReducer(
         statuses: [
           ...action.payload
         ]
+      };
+      break;
+    }
+    case EorzeaActionTypes.SetPcapWeather: {
+      state = {
+        ...state,
+        previousPcapWeather: action.newZone ? 0 : state.pcapWeather,
+        pcapWeather: action.weatherId
       };
       break;
     }

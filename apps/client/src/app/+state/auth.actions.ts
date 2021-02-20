@@ -4,7 +4,9 @@ import { AuthState } from './auth.reducer';
 import { Character, CharacterResponse } from '@xivapi/angular-client';
 import { DefaultConsumables } from '../model/user/default-consumables';
 import { Favorites } from '../model/other/favorites';
-import { GearSet } from '@ffxiv-teamcraft/simulator';
+import { LogTracking } from '../model/user/log-tracking';
+import { TeamcraftGearsetStats } from '../model/user/teamcraft-gearset-stats';
+import { CommissionProfile } from '../model/user/commission-profile';
 
 export enum AuthActionTypes {
   GetUser = '[Auth] Get user',
@@ -43,9 +45,13 @@ export enum AuthActionTypes {
   SaveSet = '[Auth] Save set',
   SaveDefaultConsumables = '[Auth] Save default consumables',
 
-  AnonymousWarningShown = '[Auth] Anonyous warning shown',
+  AnonymousWarningShown = '[Auth] Anonymous warning shown',
 
   AuthError = '[Auth] Error',
+
+  MarkAsDoneInLog = '[Auth] Mark as done in log',
+  CommissionProfileLoaded = '[Auth] Commission Profile Loaded',
+  SetContentId = '[Auth] Set Content Id',
 }
 
 /// Get User AuthState
@@ -229,7 +235,7 @@ export class ToggleMasterbooks implements Action {
 export class SaveSet implements Action {
   readonly type = AuthActionTypes.SaveSet;
 
-  constructor(public readonly set: GearSet, public readonly ignoreSpecialist: boolean) {
+  constructor(public readonly set: TeamcraftGearsetStats, public readonly ignoreSpecialist: boolean) {
   }
 }
 
@@ -237,6 +243,27 @@ export class SaveDefaultConsumables implements Action {
   readonly type = AuthActionTypes.SaveDefaultConsumables;
 
   constructor(public readonly consumables: DefaultConsumables) {
+  }
+}
+
+export class MarkAsDoneInLog implements Action {
+  readonly type = AuthActionTypes.MarkAsDoneInLog;
+
+  constructor(public readonly log: keyof LogTracking, public readonly itemId: number, public readonly done = true) {
+  }
+}
+
+export class CommissionProfileLoaded implements Action {
+  readonly type = AuthActionTypes.CommissionProfileLoaded;
+
+  constructor(public readonly payload: CommissionProfile) {
+  }
+}
+
+export class SetContentId implements Action {
+  readonly type = AuthActionTypes.SetContentId;
+
+  constructor(public readonly characterId: number, public readonly contentId: string) {
   }
 }
 
@@ -279,4 +306,7 @@ export type AuthActions = GetUser
   | UpdateUser
   | RegisterUser
   | SetCID
-  | SetWorld;
+  | SetWorld
+  | MarkAsDoneInLog
+  | CommissionProfileLoaded
+  | SetContentId;

@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CraftingAction, CraftingJob, HastyTouch, ByregotsBlessing, FinalAppraisal, Simulation } from '@ffxiv-teamcraft/simulator';
+import { ByregotsBlessing, CraftingAction, CraftingJob, FinalAppraisal, Simulation } from '@ffxiv-teamcraft/simulator';
 import { LocalizedDataService } from '../../../../core/data/localized-data.service';
 import { I18nToolsService } from '../../../../core/tools/i18n-tools.service';
 import { TranslateService } from '@ngx-translate/core';
@@ -28,11 +28,15 @@ export class MacroPopupComponent implements OnInit {
 
   public extraWait = this.settings.macroExtraWait;
 
+  public macroCompletionMessage = this.settings.macroCompletionMessage;
+
   public breakBeforeByregotsBlessing = this.settings.macroBreakBeforeByregot;
 
   public macroLock = this.settings.macroLock;
 
   public addConsumables = this.settings.macroConsumables;
+
+  public addConsumablesWaitTime = this.settings.addConsumablesWaitTime;
 
   rotation: CraftingAction[];
 
@@ -46,34 +50,43 @@ export class MacroPopupComponent implements OnInit {
 
   tooManyAactions = false;
 
-  constructor(private l12n: LocalizedDataService, private i18n: I18nToolsService, private translator: TranslateService, private settings: SettingsService) {
+  constructor(private l12n: LocalizedDataService, private i18n: I18nToolsService, private translator: TranslateService, public settings: SettingsService) {
     // TEMP: load settings and clean up localStorage
-    if (localStorage.getItem("macros:addecho") !== null){
-      this.addEcho = this.settings.macroEcho = localStorage.getItem("macros:addecho") !== 'false';
-      localStorage.removeItem("macros:addecho");
+    if (localStorage.getItem('macros:addecho') !== null) {
+      this.addEcho = this.settings.macroEcho = localStorage.getItem('macros:addecho') !== 'false';
+      localStorage.removeItem('macros:addecho');
     }
 
-    if (localStorage.getItem("macros:macrolock") !== null){
+    if (localStorage.getItem('macros:macrolock') !== null) {
       this.macroLock = this.settings.macroLock = localStorage.getItem('macros:macrolock') === 'true';
-      localStorage.removeItem("macros:macrolock");
+      localStorage.removeItem('macros:macrolock');
     }
 
-    if (localStorage.getItem("macros:consumables") !== null){
+    if (localStorage.getItem('macros:consumables') !== null) {
       this.addConsumables = this.settings.macroConsumables = localStorage.getItem('macros:consumables') === 'true';
-      localStorage.removeItem("macros:consumables");
+      localStorage.removeItem('macros:consumables');
     }
   }
 
   public generateMacros(): void {
     this.settings.macroExtraWait = this.extraWait;
     this.settings.macroLock = this.macroLock;
-    this.settings.macroConsumables = this.addConsumables;
     this.settings.macroEcho = this.addEcho;
     this.settings.macroBreakBeforeByregot = this.breakBeforeByregotsBlessing;
     this.settings.macroFixedEcho = this.fixedEcho;
     this.settings.macroEchoSeNumber = this.echoSeNumber;
+    this.settings.macroCompletionMessage = this.macroCompletionMessage;
+
+    this.settings.macroConsumables = this.addConsumables;
+    this.settings.addConsumablesWaitTime = this.addConsumablesWaitTime;
 
     this.macro = this.macroLock ? [['/mlock']] : [[]];
+    if (this.addConsumables) {
+      const notification = this.getConsumablesNotification();
+      if (notification) {
+        this.macro[0].push(notification);
+      }
+    }
     this.totalDuration = 0;
     let totalLength = 0;
     this.rotation.forEach((action, actionIndex) => {
@@ -98,7 +111,7 @@ export class MacroPopupComponent implements OnInit {
       }
 
       let doneWithChunk: boolean;
-      if (this.breakBeforeByregotsBlessing && actionIndex < this.rotation.length - 1 && this.rotation[actionIndex+1].is(ByregotsBlessing)) {
+      if (this.breakBeforeByregotsBlessing && actionIndex < this.rotation.length - 1 && this.rotation[actionIndex + 1].is(ByregotsBlessing)) {
         doneWithChunk = true;
       } else if (macroFragment.length === 14 && this.addEcho && this.rotation.length > totalLength + 1) {
         doneWithChunk = true;
@@ -120,9 +133,9 @@ export class MacroPopupComponent implements OnInit {
       if (this.fixedEcho) {
         seNumber = this.echoSeNumber;
       } else {
-        seNumber = Math.min(this.echoSeNumber + this.macro.length, 16);
+        seNumber = Math.min(this.echoSeNumber + this.macro.length - 1, 16);
       }
-      this.macro[this.macro.length - 1].push(`/echo Craft finished <se.${seNumber}>`);
+      this.macro[this.macro.length - 1].push(`/echo ${this.macroCompletionMessage} <se.${seNumber}>`);
     }
   }
 
@@ -165,7 +178,7 @@ export class MacroPopupComponent implements OnInit {
     if (necessaryBuffs.length > 0) {
       const notification = this.translator.instant('SIMULATOR.Consumable_notification',
         { buffs: necessaryBuffs.join(', ') });
-      return `/echo ${notification} <se.5>`;
+      return `/echo ${notification} <se.5> <wait.${this.addConsumablesWaitTime}>`;
     }
     return undefined;
   }

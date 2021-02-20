@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input } from '@angular/core';
 import { List } from '../model/list';
 import { ListsFacade } from '../+state/lists.facade';
-import { NzMessageService, NzModalService } from 'ng-zorro-antd';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { TranslateService } from '@ngx-translate/core';
 import { LinkToolsService } from '../../../core/tools/link-tools.service';
 import { ListRow } from '../model/list-row';
 import { TagsPopupComponent } from '../tags-popup/tags-popup.component';
 import { NameQuestionPopupComponent } from '../../name-question-popup/name-question-popup/name-question-popup.component';
-import { debounceTime, distinctUntilChanged, filter, first, map, shareReplay, switchMap, tap } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, filter, first, map, shareReplay, switchMap, takeUntil, tap } from 'rxjs/operators';
 import { ListManagerService } from '../list-manager.service';
 import { AuthFacade } from '../../../+state/auth.facade';
 import { PermissionLevel } from '../../../core/database/permissions/permission-level.enum';
@@ -28,6 +29,8 @@ import { LayoutsFacade } from '../../../core/layout/+state/layouts.facade';
 import { LayoutOrderService } from '../../../core/layout/layout-order.service';
 import { SettingsService } from '../../settings/settings.service';
 import { ListColor } from '../model/list-color';
+import { TeamcraftComponent } from '../../../core/component/teamcraft-component';
+import { ListSplitPopupComponent } from '../list-split-popup/list-split-popup.component';
 
 @Component({
   selector: 'app-list-panel',
@@ -35,7 +38,10 @@ import { ListColor } from '../model/list-color';
   styleUrls: ['./list-panel.component.less'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ListPanelComponent {
+export class ListPanelComponent extends TeamcraftComponent {
+
+  //Bound for number of a single item in a list
+  minAmount = 1;
 
   @Input()
   public set list(l: List) {
@@ -55,13 +61,27 @@ export class ListPanelComponent {
 
   public user$ = this.authFacade.user$;
 
-  public listTemplate$: Observable<ListTemplate>;
+  public listTemplate$: Observable<ListTemplate> = combineLatest([this.customLinksFacade.myCustomLinks$, this.list$]).pipe(
+    map(([links, list]) => {
+      return <ListTemplate>links.find(link => {
+        return link.type === 'template' && (<ListTemplate>link).originalListId === list.$key;
+      });
+    })
+  );
 
-  public customLink$: Observable<CustomLink>;
+  public customLink$: Observable<CustomLink> = combineLatest([this.customLinksFacade.myCustomLinks$, this.list$]).pipe(
+    map(([links, list]) => links.find(link => link.redirectTo === `list/${list.$key}`)),
+    tap(link => link !== undefined ? this.syncLinkUrl = link.getUrl() : null),
+    shareReplay(1)
+  );
 
-  public teams$: Observable<Team[]>;
+  public teams$: Observable<Team[]> = this.teamsFacade.myTeams$;
 
-  public listContent$: Observable<ListRow[]>;
+  public listContent$: Observable<ListRow[]> = combineLatest([this.list$, this.layoutsFacade.selectedLayout$]).pipe(
+    map(([list, layout]) => {
+      return this.layoutOrderService.order(list.finalItems, layout.recipeOrderBy, layout.recipeOrder);
+    })
+  );
 
   private syncLinkUrl: string;
 
@@ -74,28 +94,41 @@ export class ListPanelComponent {
     };
   });
 
-  permissionLevel$: Observable<PermissionLevel> = combineLatest(this.teamsFacade.myTeams$, this.authFacade.loggedIn$).pipe(
+  isFavorite$: Observable<{ value: boolean }> = combineLatest([this.authFacade.favorites$, this.list$]).pipe(
+    filter(([favorites]) => favorites !== undefined),
+    map(([favorites, list]) => {
+      return {
+        value: favorites.lists.indexOf(list.$key) > -1
+      };
+    })
+  );
+
+  permissionLevel$: Observable<{ value: PermissionLevel }> = combineLatest([this.teamsFacade.myTeams$, this.authFacade.loggedIn$]).pipe(
     switchMap(([teams, loggedIn]) => {
-      return combineLatest(
+      return combineLatest([
         this.authFacade.userId$,
         loggedIn ? this.authFacade.user$ : of(null),
-        this.list$
-      ).pipe(
-        map(([userId, user, list]) => {
+        this.list$,
+        this.isFavorite$
+      ]).pipe(
+        map(([userId, user, list, isFavorite]) => {
           if (user !== null) {
             const isTeamList = list.teamId && teams.some(team => list.teamId === team.$key);
             const teamLeader = isTeamList && (teams.find(team => list.teamId === team.$key).leader === userId);
-            return Math.max(
+            return [Math.max(
               list.getPermissionLevel(userId),
               list.getPermissionLevel(user.currentFcId),
               isTeamList ? PermissionLevel.PARTICIPATE : PermissionLevel.NONE,
               teamLeader ? PermissionLevel.WRITE : PermissionLevel.NONE
-            );
+            ), isFavorite.value];
           } else {
-            return list.getPermissionLevel(userId);
+            return [list.getPermissionLevel(userId), isFavorite.value];
           }
         }),
-        map(permissionLevel => {
+        map(([permissionLevel, isFavorite]: [PermissionLevel, boolean]) => {
+          if (isFavorite) {
+            return Math.max(10, permissionLevel);
+          }
           if (this.publicDisplay && permissionLevel < 40) {
             return 0;
           }
@@ -104,37 +137,22 @@ export class ListPanelComponent {
         distinctUntilChanged(),
         shareReplay(1)
       );
+    }),
+    map(level => {
+      return {
+        value: level
+      };
     })
   );
 
   constructor(private listsFacade: ListsFacade, private message: NzMessageService,
-              private translate: TranslateService, private linkTools: LinkToolsService,
+              public translate: TranslateService, private linkTools: LinkToolsService,
               private dialog: NzModalService, private listManager: ListManagerService,
               public authFacade: AuthFacade, private customLinksFacade: CustomLinksFacade,
               private discordWebhookService: DiscordWebhookService, private teamsFacade: TeamsFacade,
               private router: Router, private layoutsFacade: LayoutsFacade, private layoutOrderService: LayoutOrderService,
               private cd: ChangeDetectorRef, public settings: SettingsService) {
-    this.customLink$ = combineLatest(this.customLinksFacade.myCustomLinks$, this.list$).pipe(
-      map(([links, list]) => links.find(link => link.redirectTo === `list/${list.$key}`)),
-      tap(link => link !== undefined ? this.syncLinkUrl = link.getUrl() : null),
-      shareReplay(1)
-    );
-
-    this.teams$ = this.teamsFacade.myTeams$;
-
-    this.listTemplate$ = combineLatest(this.customLinksFacade.myCustomLinks$, this.list$).pipe(
-      map(([links, list]) => {
-        return <ListTemplate>links.find(link => {
-          return link.type === 'template' && (<ListTemplate>link).originalListId === list.$key;
-        });
-      })
-    );
-
-    this.listContent$ = combineLatest(this.list$, this.layoutsFacade.selectedLayout$).pipe(
-      map(([list, layout]) => {
-        return this.layoutOrderService.order(list.finalItems, layout.recipeOrderBy, layout.recipeOrder);
-      })
-    );
+    super();
   }
 
   public outDated(): boolean {
@@ -145,31 +163,32 @@ export class ListPanelComponent {
     this.listsFacade.deleteList(list.$key, list.offline);
   }
 
-  getLink(): string {
+  getLink = () => {
     return this.syncLinkUrl ? this.syncLinkUrl : this.linkTools.getLink(`/list/${this._list.$key}`);
-  }
+  };
 
-  openList(): void {
-    if (!this.publicDisplay) {
+  openList(favorite: boolean): void {
+    if (!this.publicDisplay || favorite) {
       this.router.navigate(['/list', this._list.$key]);
     }
   }
 
-  cloneList(compact: List): void {
-    // Connect with store to get full list details before cloning
-    this.listsFacade.load(compact.$key);
-    this.listsFacade.allListDetails$.pipe(
-      map(lists => lists.find(l => l.$key === compact.$key)),
-      filter(list => list !== undefined),
+  leaveList(list: List, userId: string): void {
+    delete list.registry[userId];
+    this.listsFacade.updateList(list);
+  }
+
+  cloneList(list: List): void {
+    this.listsFacade.loadMyLists();
+    const clone = list.clone();
+    this.listsFacade.updateList(list);
+    this.listManager.upgradeList(clone).pipe(
       first(),
-      switchMap(list => {
-        const clone = list.clone();
-        this.listsFacade.updateList(list);
-        this.listsFacade.addList(clone);
+      switchMap(upgradedClone => {
+        this.listsFacade.addList(upgradedClone);
         return this.listsFacade.myLists$
           .pipe(
-            map(lists => lists.find(l => l.createdAt.toMillis() === clone.createdAt.toMillis() && l.$key !== undefined)),
-            filter(l => l !== undefined),
+            filter(lists => lists.some(l => l.createdAt.toMillis() === upgradedClone.createdAt.toMillis() && l.$key !== undefined)),
             first()
           );
       })
@@ -179,6 +198,9 @@ export class ListPanelComponent {
   }
 
   updateAmount(item: ListRow, inputValue: number): void {
+    if (inputValue.toString().length === 0) {
+      return;
+    }
     let updateSubject = this.updateAmountDebounces[item.id];
     if (updateSubject === undefined) {
       updateSubject = new Subject<number>();
@@ -186,12 +208,16 @@ export class ListPanelComponent {
       updateSubject.pipe(
         debounceTime(500),
         switchMap((newAmount: number) => {
-          this.listsFacade.load(this._list.$key);
           return this.listsFacade.allListDetails$.pipe(
             map(details => details.find(l => l.$key === this._list.$key)),
             filter(l => l !== undefined),
             first(),
-            switchMap(listDetails => this.listManager.addToList(item.id, listDetails, item.recipeId, newAmount - item.amount))
+            switchMap(listDetails => this.listManager.addToList({
+              itemId: item.id,
+              list: listDetails,
+              recipeId: item.recipeId,
+              amount: newAmount - item.amount
+            }))
           );
         }))
         .subscribe(list => {
@@ -204,7 +230,7 @@ export class ListPanelComponent {
 
   setColor(color: ListColor, list: List): void {
     list.color = color;
-    this.listsFacade.updateList(list);
+    this.listsFacade.pureUpdateList(list.$key, { color: color });
   }
 
   getTags(): string[] {
@@ -212,7 +238,6 @@ export class ListPanelComponent {
   }
 
   assignTeam(compact: List, team: Team): void {
-    this.listsFacade.load(compact.$key);
     this.listsFacade.allListDetails$.pipe(
       map(details => details.find(l => l.$key === this._list.$key)),
       filter(l => l !== undefined),
@@ -229,27 +254,31 @@ export class ListPanelComponent {
     });
   }
 
-  removeTeam(compact: List, teams: Team[]): void {
-    const team = teams.find(t => t.$key === compact.teamId);
-    this.listsFacade.load(compact.$key);
-    this.listsFacade.allListDetails$.pipe(
-      map(details => details.find(l => l.$key === this._list.$key)),
-      filter(l => l !== undefined),
-      first(),
-      map(list => {
-        delete list.teamId;
-        return list;
-      })
-    ).subscribe(list => {
-      this.listsFacade.updateList(list, true, true);
-      if (team.webhook !== undefined) {
-        this.discordWebhookService.notifyListRemovedFromTeam(team, list);
-      }
+  removeTeam(list: List, teams: Team[]): void {
+    const team = teams.find(t => t.$key === list.teamId);
+    delete list.teamId;
+    if (team.webhook !== undefined) {
+      this.discordWebhookService.notifyListRemovedFromTeam(team, list);
+    }
+    this.listsFacade.updateList(list, true, true);
+
+  }
+
+  archiveList(list: List, archived: boolean): void {
+    list.archived = archived;
+    this.listsFacade.pureUpdateList(list.$key, { archived: archived });
+  }
+
+  openSplitPopup(list: List): void {
+    this.dialog.create({
+      nzTitle: this.translate.instant('LIST_DETAILS.Split_list'),
+      nzFooter: null,
+      nzContent: ListSplitPopupComponent,
+      nzComponentParams: { list: list }
     });
   }
 
   renameList(_list: List): void {
-    this.listsFacade.load(this._list.$key);
     this.dialog.create({
       nzContent: NameQuestionPopupComponent,
       nzComponentParams: { baseName: _list.name },
@@ -279,30 +308,18 @@ export class ListPanelComponent {
       nzContent: PermissionsBoxComponent,
       nzComponentParams: { data: list, ready$: modalReady$ }
     });
-    this.listsFacade.load(list.$key);
     modalReady$.pipe(
       first(),
       switchMap(() => {
         return modalRef.getContentComponent().changes$;
       }),
-      switchMap(() => {
-        return this.listsFacade.allListDetails$.pipe(
-          map(details => details.find(l => l.$key === list.$key)),
-          filter(l => l !== undefined),
-          first(),
-          map(changes => {
-            Object.assign(list, changes);
-            return list;
-          })
-        );
-      })
-    ).subscribe((res) => {
-      this.listsFacade.updateList(res);
+      takeUntil(this.onDestroy$)
+    ).subscribe(() => {
+      this.listsFacade.updateList(list);
     });
   }
 
   removeEphemeral(list: List): void {
-    this.listsFacade.load(list.$key);
     this.listsFacade.allListDetails$.pipe(
       map(details => details.find(l => l.$key === list.$key)),
       filter(l => l !== undefined),
@@ -332,14 +349,6 @@ export class ListPanelComponent {
     });
   }
 
-  afterLinkCopy(): void {
-    this.message.success(this.translate.instant('Share_link_copied'));
-  }
-
-  afterTemplateUrlCopy(): void {
-    this.message.success(this.translate.instant('LIST_TEMPLATE.Share_link_copied'));
-  }
-
   openTagsPopup(list: List): void {
     this.dialog.create({
       nzTitle: this.translate.instant('LIST_DETAILS.Tags_popup'),
@@ -351,10 +360,6 @@ export class ListPanelComponent {
 
   createCustomLink(list: List, user: TeamcraftUser): void {
     this.customLinksFacade.createCustomLink(list.name, `list/${list.$key}`, user);
-  }
-
-  afterCustomLinkCopy(): void {
-    this.message.success(this.translate.instant('CUSTOM_LINKS.Share_link_copied'));
   }
 
   createTemplate(list: List, user: TeamcraftUser): void {
@@ -396,4 +401,13 @@ export class ListPanelComponent {
     return item.id;
   }
 
+  mouseWheelUpAmount(event: any, item: ListRow): void {
+    this.updateAmount(item, ++item.amount);
+  }
+
+  mouseWheelDownAmount(event: any, item: ListRow): void {
+    if (item.amount > this.minAmount) {
+      this.updateAmount(item, --item.amount);
+    }
+  }
 }

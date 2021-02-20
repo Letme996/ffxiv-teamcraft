@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, TemplateRef } from '@angular/core';
-import { CraftingAction, CraftingActionsRegistry, Simulation, StepState } from '@ffxiv-teamcraft/simulator';
-import { NzDropdownContextComponent, NzDropdownService } from 'ng-zorro-antd';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { CraftingAction, Simulation, StepState } from '@ffxiv-teamcraft/simulator';
+import { SimulationService } from '../../../../core/simulation/simulation.service';
+import { SettingsService } from 'apps/client/src/app/modules/settings/settings.service';
+import { NzContextMenuService, NzDropdownMenuComponent } from 'ng-zorro-antd/dropdown';
 
 @Component({
   selector: 'app-action',
@@ -16,11 +18,23 @@ export class ActionComponent {
   @Output()
   stepstate: EventEmitter<StepState> = new EventEmitter<StepState>();
 
+  @Output()
+  failChange: EventEmitter<boolean> = new EventEmitter<boolean>();
+
   @Input()
   action: CraftingAction;
 
+
+  private _simulation: Simulation;
   @Input()
-  simulation: Simulation;
+  set simulation(simulation: Simulation) {
+    this._simulation = simulation;
+    this.computeAvailableConditions();
+  }
+
+  get simulation(): Simulation {
+    return this._simulation;
+  }
 
   @Input()
   wasted = false;
@@ -53,28 +67,47 @@ export class ActionComponent {
   safe = true;
 
   @Input()
-  state: StepState;
+  state: StepState = StepState.NORMAL;
 
   @Input()
   showStateMenu = false;
 
-  public states = StepState;
+  @Input()
+  readonly = false;
 
-  private dropdown: NzDropdownContextComponent;
+  availableConditions: { condition: number, name: string }[] = [];
 
-  constructor(private nzDropdownService: NzDropdownService) {
+  private get simulator() {
+    return this.simulationService.getSimulator(this.settings.region);
+  }
+
+  private get registry() {
+    return this.simulator.CraftingActionsRegistry;
+  }
+
+  constructor(private nzDropdownService: NzContextMenuService, private settings: SettingsService,
+              private simulationService: SimulationService) {
+  }
+
+  private computeAvailableConditions(): void {
+    this.availableConditions = (this.simulation.possibleConditions || [StepState.NORMAL, StepState.GOOD, StepState.EXCELLENT, StepState.POOR]).map(condition => {
+      return {
+        condition,
+        name: `${StepState[condition].slice(0, 1)}${StepState[condition].slice(1).toLowerCase()}`
+      };
+    });
   }
 
   getAlt(): string {
-    return CraftingActionsRegistry.ALL_ACTIONS.find(a => a.action.getIds()[0] === this.action.getIds()[0]).name;
+    return this.registry.ALL_ACTIONS.find(a => a.action.getIds()[0] === this.action.getIds()[0]).name;
   }
 
   getJobId(): number {
     return this.simulation !== undefined ? this.simulation.crafterStats.jobId : this.jobId;
   }
 
-  contextMenu($event: MouseEvent, template: TemplateRef<void>): void {
-    this.dropdown = this.nzDropdownService.create($event, template);
+  contextMenu($event: MouseEvent, template: NzDropdownMenuComponent): void {
+    this.nzDropdownService.create($event, template);
   }
 
   setState(state: StepState): void {
@@ -82,7 +115,7 @@ export class ActionComponent {
   }
 
   close(): void {
-    this.dropdown.close();
+    this.nzDropdownService.close();
   }
 
   getColor(state: StepState): string {
@@ -91,10 +124,18 @@ export class ActionComponent {
         return 'cyan';
       case StepState.GOOD:
         return 'orange';
+      case StepState.STURDY:
+        return 'blue';
+      case StepState.PLIANT:
+        return 'green';
+      case StepState.CENTERED:
+        return 'yellow';
       case StepState.POOR:
-        return 'purple';
-      case StepState.FAILED:
-        return 'red';
+        return 'violet';
+      case StepState.MALLEABLE:
+        return 'darkblue';
+      case StepState.PRIMED:
+        return 'darkmagenta';
     }
   }
 }

@@ -2,16 +2,16 @@ import { Component } from '@angular/core';
 import { AuthFacade } from '../../../+state/auth.facade';
 import { BehaviorSubject, combineLatest } from 'rxjs';
 import { filter, first, map, shareReplay, switchMapTo } from 'rxjs/operators';
-import { NzModalService } from 'ng-zorro-antd';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { MasterbooksPopupComponent } from './masterbooks-popup/masterbooks-popup.component';
 import { TranslateService } from '@ngx-translate/core';
 import { StatsPopupComponent } from './stats-popup/stats-popup.component';
 import { UserPickerService } from '../../../modules/user-picker/user-picker.service';
 import { TeamcraftUser } from '../../../model/user/teamcraft-user';
 import { VerificationPopupComponent } from './verification-popup/verification-popup.component';
-import { CharacterResponse } from '@xivapi/angular-client';
 import { IpcService } from '../../../core/electron/ipc.service';
 import { AutofillStatsPopupComponent } from './autofill-stats-popup/autofill-stats-popup.component';
+import { TeamcraftGearsetStats } from '../../../model/user/teamcraft-gearset-stats';
 
 @Component({
   selector: 'app-profile-editor',
@@ -31,7 +31,6 @@ export class ProfileEditorComponent {
   characters$ = combineLatest([this.authFacade.characters$, this.authFacade.user$]).pipe(
     map(([chars, user]) => {
       return chars
-        .concat(<CharacterResponse[]>(user.customCharacters.map(c => ({ Character: c })) || []))
         .map(char => {
           const lodestoneIdEntry = user.lodestoneIds.find(entry => entry.id === char.Character.ID);
           return {
@@ -49,6 +48,10 @@ export class ProfileEditorComponent {
 
   constructor(private authFacade: AuthFacade, private dialog: NzModalService, private translate: TranslateService,
               private userPicker: UserPickerService, public ipc: IpcService) {
+  }
+
+  saveSet(set: TeamcraftGearsetStats): void {
+    this.authFacade.saveSet(set);
   }
 
   addCharacter(): void {
@@ -78,7 +81,10 @@ export class ProfileEditorComponent {
       },
       nzFooter: null,
       nzTitle: this.translate.instant('PROFILE.Stats')
-    });
+    }).afterClose
+      .subscribe(() => {
+        this.statsReloader$.next(null);
+      });
   }
 
   openAutoFillPopup(): void {

@@ -12,7 +12,7 @@
         {{'SUPPORT_US.Communication_description' | translate}}
       </div>
       <div class="macro">
-        <button [cbContent]="macro" class="copy-macro" ngxClipboard nz-button nzShape="circle"
+        <button [clipboard]="macro" class="copy-macro" nz-button nzShape="circle"
                 nzSize="small">
           <i nz-icon nzType="copy"></i>
         </button>
@@ -31,7 +31,7 @@
       </ng-template>
       <div>{{'SUPPORT_US.Contribute_description' | translate}}</div>
       <ng-template #github>
-        <a href="https://github.com/supamiu/ffxiv-teamcraft" target="_blank">
+        <a href="https://github.com/ffxiv-teamcraft/ffxiv-teamcraft" target="_blank">
           {{'See_code_github' | translate}}
         </a>
       </ng-template>
@@ -55,7 +55,7 @@
       <li>{{'SUPPORT_US.PATREON_BENEFITS.Profile_badge' | translate: { price: 1 } }}</li>
       <li>{{'SUPPORT_US.PATREON_BENEFITS.Custom_theme' | translate: { price: 1 } }}</li>
       <!--<li>{{'SUPPORT_US.PATREON_BENEFITS.Bot_access' | translate: { price: 5 } }}</li>-->
-      <li>{{'SUPPORT_US.PATREON_BENEFITS.Pins_badge' | translate: { price: 10 } }}</li>
+<!--      <li>{{'SUPPORT_US.PATREON_BENEFITS.Pins_badge' | translate: { price: 10 } }}</li>-->
       <li>{{'SUPPORT_US.PATREON_BENEFITS.Loading_screen_message' | translate: { price: 10 } }}</li>
     </ul>
     <ng-template #patreon>

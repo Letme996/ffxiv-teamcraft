@@ -7,7 +7,7 @@
           <div>{{rotation.getName()}}</div>
           <app-user-avatar *ngIf="publicDisplay" [userId]="rotation.authorId" [width]="24"></app-user-avatar>
         </div>
-        <div fxFlex="1 1 auto" fxLayout="row" fxLayoutAlign="flex-start center" fxLayoutGap="5px">
+        <div fxFlex="1 1 auto" fxLayout="row wrap" fxLayoutAlign="flex-start center" fxLayoutGap="5px">
           <ng-container *ngIf="rotation.public">
             <nz-tag *ngIf="rotation.public && !publicDisplay" [style.border-color]="'#108ee9'" class="custom-tag">
               {{'SIMULATOR.COMMUNITY_ROTATIONS.Community_rotation' | translate}}
@@ -17,54 +17,56 @@
               class="custom-tag">{{('SIMULATOR.COMMUNITY_ROTATIONS.TAGS.' + tag) | translate}}</nz-tag>
             <nz-tag [style.border-color]="'#bd0ef2'"
                     class="custom-tag">{{'SIMULATOR.CONFIGURATION.STATS.Craftsmanship' | translate}}
-              : {{rotation.community.minCraftsmanship}}</nz-tag>
+              : {{rotation.community.minCraftsmanship | number:'1.0-0':translate.currentLang}}</nz-tag>
             <nz-tag [style.border-color]="'#bd0ef2'"
                     class="custom-tag">{{'SIMULATOR.CONFIGURATION.STATS.Control' | translate}}
-              : {{rotation.community.minControl}}</nz-tag>
+              : {{rotation.community.minControl | number:'1.0-0':translate.currentLang}}</nz-tag>
             <nz-tag [style.border-color]="'#bd0ef2'"
                     class="custom-tag">{{'SIMULATOR.CONFIGURATION.STATS.CP' | translate}}
-              : {{rotation.community.minCp}}</nz-tag>
+              : {{rotation.community.minCp | number:'1.0-0':translate.currentLang}}</nz-tag>
             <nz-tag
               [style.border-color]="'#108ee9'"
               class="custom-tag">{{'SIMULATOR.COMMUNITY_ROTATIONS.Steps_count' | translate: { count: rotation.rotation.length } }}</nz-tag>
             <nz-tag [style.border-color]="'#f2b10e'" class="custom-tag">{{'SIMULATOR.Durability' | translate}}
-              : {{rotation.community.durability}}</nz-tag>
+              : {{rotation.community.durability | number:'1.0-0':translate.currentLang}}</nz-tag>
+            <nz-tag [style.border-color]="'#f2b10e'" class="custom-tag">{{'SIMULATOR.COMMUNITY_ROTATIONS.Difficulty_filter_placeholder' | translate}}
+              : {{rotation.recipe.progress | number:'1.0-0':translate.currentLang}}</nz-tag>
+            <nz-tag [style.border-color]="'#f2b10e'" class="custom-tag">{{'SIMULATOR.Quality' | translate}}
+              : {{rotation.recipe.quality | number:'1.0-0':translate.currentLang}}</nz-tag>
           </ng-container>
         </div>
         <div fxLayout="row" fxLayoutGap="5px">
           <ng-container *ngIf="publicDisplay && authFacade.loggedIn$ | async">
             <div *ngIf="simulation$ | async as result" fxLayout="row" fxLayoutAlign="center center" fxLayoutGap="5px">
               <div *ngIf="rotation.tags.indexOf('SPECIALIST') > -1 && !((simulationSet$ | async)?.specialist)">
-                <i [nzTitle]="'SIMULATOR.COMMUNITY_ROTATIONS.Specialist_rotation_warning' | translate"
+                <i [nzTooltipTitle]="'SIMULATOR.COMMUNITY_ROTATIONS.Specialist_rotation_warning' | translate"
                    [twoToneColor]="'#aa9400'" nz-icon nz-tooltip
                    nzType="exclamation-circle" theme="twotone"></i>
               </div>
-              <div [nzTitle]="'SIMULATOR.COMMUNITY_ROTATIONS.Result_tooltip' | translate" nz-tooltip>
-                <nz-tag *ngIf="result.success"
-                        [style.border-color]="'darkgreen'"
-                        class="custom-tag">{{'SIMULATOR.COMMUNITY_ROTATIONS.Success' | translate: { HQ: result.hqPercent } }}</nz-tag>
-                <nz-tag *ngIf="!result.success"
-                        [style.border-color]="'#f50'"
-                        class="custom-tag">{{'SIMULATOR.COMMUNITY_ROTATIONS.Fail' | translate}}</nz-tag>
-              </div>
-              <button (click)="openMacroPopup(result.simulation)" [nzTitle]="'SIMULATOR.Generate_ingame_macro' | translate" nz-button nz-tooltip
+              <app-rotation-result-tag [rotation]="rotation" [simulationSet]="simulationSet$ | async"></app-rotation-result-tag>
+              <button (click)="openMacroPopup(result.simulation)" [nzTooltipTitle]="'SIMULATOR.Generate_ingame_macro' | translate" nz-button nz-tooltip
                       nzShape="circle"
                       nzType="primary">
                 <span class="text-icon">XIV</span>
               </button>
             </div>
           </ng-container>
-          <button (click)="$event.stopPropagation();renameRotation(rotation)" *ngIf="(permissionLevel$ | async) >= 40" [nzTitle]="'SIMULATOR.Rename_rotation' | translate" nz-button
+          <button (click)="$event.stopPropagation();renameRotation(rotation)" *ngIf="(permissionLevel$ | async) >= 40"
+                  [nzTooltipTitle]="'SIMULATOR.Rename_rotation' | translate" nz-button
                   nz-tooltip
                   nzShape="circle">
             <i nz-icon nzType="edit"></i>
           </button>
-          <button (cbOnSuccess)="afterLinkCopy()" (click)="$event.stopPropagation()" [cbContent]="getLink(rotation)" [nzShape]="'circle'"
-                  [nzTitle]="'SIMULATOR.Share_button_tooltip' | translate"
-                  ngxClipboard nz-button nz-tooltip>
+          <button (click)="$event.stopPropagation()"
+                  [clipboard]="getLink(rotation)"
+                  [clipboardFnArgs]="[rotation]"
+                  [clipboardSuccessMessage]="'SIMULATOR.Share_link_copied' | translate"
+                  [nzShape]="'circle'"
+                  [nzTooltipTitle]="'SIMULATOR.Share_button_tooltip' | translate"
+                  nz-button nz-tooltip>
             <i nz-icon nzType="share-alt"></i>
           </button>
-          <a (click)="$event.stopPropagation()" [nzShape]="'circle'" [nzTitle]="'SIMULATOR.Simulate_tooltip' | translate"
+          <a (click)="$event.stopPropagation()" [nzShape]="'circle'" [nzTooltipTitle]="'SIMULATOR.Simulate_tooltip' | translate"
              [nzType]="'primary'"
              [routerLink]="getRouterLink(rotation)"
              nz-button
@@ -72,12 +74,13 @@
             <i nz-icon nzType="folder-open"></i>
           </a>
           <button (click)="$event.stopPropagation();openOverlay(rotation)" *ngIf="platformService.isDesktop()" [nzShape]="'circle'"
-                  [nzTitle]="'ALARMS.Open_overlay' | translate" [nzType]="'primary'"
+                  [nzTooltipTitle]="'ALARMS.Open_overlay' | translate" [nzType]="'primary'"
                   nz-button
                   nz-tooltip>
             <i nz-icon nzType="desktop"></i>
           </button>
-          <button (click)="$event.stopPropagation()" (nzOnConfirm)="delete(rotation)" *ngIf="(permissionLevel$ | async) >= 40" [nzShape]="'circle'" [nzTitle]="'SIMULATOR.Confirm_delete' | translate"
+          <button (click)="$event.stopPropagation()" (nzOnConfirm)="delete(rotation)" *ngIf="(permissionLevel$ | async) >= 40" [nzShape]="'circle'"
+                  [nzPopconfirmTitle]="'SIMULATOR.Confirm_delete' | translate"
                   [nzType]="'danger'" nz-button
                   nz-popconfirm>
             <i nz-icon nzType="delete"></i>
@@ -85,7 +88,7 @@
           <ng-container *ngIf="(permissionLevel$ | async) >= 40">
             <ng-container *ngIf="user$ | async as user">
               <ng-container *ngIf="user.patron || user.admin">
-                <button (click)="$event.stopPropagation()" *ngIf="(permissionLevel$ | async) >= 30" [nzBackdrop]="false" [nzDropdownMenu]="menu"
+                <button (click)="$event.stopPropagation()" *ngIf="(permissionLevel$ | async) >= 30"  [nzDropdownMenu]="menu"
                         [nzPlacement]="'bottomRight'"
                         [nzShape]="'circle'" [nzTrigger]="'click'"
                         nz-button
@@ -100,7 +103,9 @@
                       {{'CUSTOM_LINKS.Add_link' | translate}}
                     </li>
                     <ng-template #copyLink>
-                      <li (cbOnSuccess)="afterCustomLinkCopy()" *ngIf="customLink$ | async as link" [cbContent]="link.getUrl()" ngxClipboard
+                      <li *ngIf="customLink$ | async as link"
+                          [clipboard]="link.getUrl"
+                          [clipboardSuccessMessage]="'CUSTOM_LINKS.Share_link_copied' | translate"
                           nz-menu-item>
                         {{'CUSTOM_LINKS.Copy_custom_link' | translate}}
                       </li>

@@ -1,0 +1,176 @@
+{
+  "1": {
+    "en": "Maelstrom Uniform",
+    "ja": "黒渦団制式装備",
+    "de": "Mahlstrom-Uniform",
+    "fr": "Uniforme du Maelstrom"
+  },
+  "2": {
+    "en": "Order of the Twin Adder Uniform",
+    "ja": "双蛇党制式装備",
+    "de": "Bruderschafts-Uniform",
+    "fr": "Uniforme des Deux Vipères"
+  },
+  "3": {
+    "en": "Immortal Flames Uniform",
+    "ja": "不滅隊制式装備",
+    "de": "Legions-Uniform",
+    "fr": "Uniforme des Immortels"
+  },
+  "4": {
+    "en": "Eastern Garb for Men",
+    "ja": "東方殿方装束",
+    "de": "Fernöstliche Herrengewänder",
+    "fr": "Tenue de seigneur oriental"
+  },
+  "5": {
+    "en": "Eastern Garb for Women",
+    "ja": "東方姫君装束",
+    "de": "Fernöstliche Damengewänder",
+    "fr": "Tenue de dame noble orientale"
+  },
+  "6": {
+    "en": "Far Eastern Attire for Men",
+    "ja": "東方警邏装束",
+    "de": "Fernöstliche Herrenbekleidung",
+    "fr": "Tenue de garde oriental"
+  },
+  "7": {
+    "en": "Far Eastern Attire for Women",
+    "ja": "東方女官装束",
+    "de": "Fernöstliche Damenbekleidung",
+    "fr": "Tenue de damoiselle orientale"
+  },
+  "8": {
+    "en": "Exclusive Eastern Journey Attire",
+    "ja": "イースタンEXアタイア",
+    "de": "Exklusive fernöstliche Reisekleidung",
+    "fr": "Tenue du Voyage en Orient spéciale"
+  },
+  "9": {
+    "en": "Loyal Housemaid's Uniform",
+    "ja": "メイドEXアタイア",
+    "de": "Exklusive Hausmädchen-Bekleidung",
+    "fr": "Tenue de soubrette spéciale"
+  },
+  "10": {
+    "en": "Loyal Butler's Uniform",
+    "ja": "バトラーEXアタイア",
+    "de": "Exklusive Butler-Bekleidung",
+    "fr": "Tenue de majordome spéciale"
+  },
+  "11": {
+    "en": "Nezha Lord's Attire",
+    "ja": "ナタ殿方装束",
+    "de": "Bekleidung des Nezha-Herren",
+    "fr": "Tenue de seigneur de Nezha"
+  },
+  "12": {
+    "en": "Nezha Lady's Attire",
+    "ja": "ナタ姫君装束",
+    "de": "Bekleidung der Nezha-Dame",
+    "fr": "Tenue de dame de Nezha"
+  },
+  "13": {
+    "en": "Far Eastern Noble's Attire",
+    "ja": "東方貴人装束",
+    "de": "Fernöstliche Adeligen-Bekleidung",
+    "fr": "Tenue de noble oriental"
+  },
+  "14": {
+    "en": "Fuga Garb",
+    "ja": "風雅装束",
+    "de": "Fuga-Bekleidung",
+    "fr": "Tenue orientale traditionnelle"
+  },
+  "15": {
+    "en": "Far Eastern Gentleman's Attire",
+    "ja": "東方雅人装束",
+    "de": "Bekleidung des fernöstlichen Kavaliers",
+    "fr": "Tenue de gentilhomme oriental"
+  },
+  "16": {
+    "en": "Far Eastern Beauty's Attire",
+    "ja": "東方麗人装束",
+    "de": "Bekleidung der fernöstlichen Schönheit",
+    "fr": "Tenue de beauté orientale"
+  },
+  "17": {
+    "en": "Emerald Carbuncle Attire",
+    "ja": "カーバンクル・エメラルドアタイア",
+    "de": "Smaragd-Karfunkel-Bekleidung",
+    "fr": "Tenue de Carbuncle émeraude"
+  },
+  "18": {
+    "en": "Topaz Carbuncle Attire",
+    "ja": "カーバンクル・トパーズアタイア",
+    "de": "Topas-Karfunkel-Bekleidung",
+    "fr": "Tenue de Carbuncle topaze"
+  },
+  "19": {
+    "en": "Angelic Attire",
+    "ja": "エンジェルアタイア",
+    "de": "Engelhafte Bekleidung",
+    "fr": "Tenue angélique"
+  },
+  "20": {
+    "en": "Demonic Attire",
+    "ja": "デモンアタイア",
+    "de": "Dämonische Bekleidung",
+    "fr": "Tenue démoniaque"
+  },
+  "21": {
+    "en": "Faerie Tale Prince's Attire",
+    "ja": "プリンスアタイア",
+    "de": "Bekleidung des fernöstlichen Prinzen",
+    "fr": "Tenue de prince"
+  },
+  "22": {
+    "en": "Faerie Tale Princess's Attire",
+    "ja": "プリンセスアタイア",
+    "de": "Bekleidung der fernöstlichen Prinzessin",
+    "fr": "Tenue de princesse"
+  },
+  "23": {
+    "en": "Far Eastern Schoolboy's Uniform",
+    "ja": "東方書生装束",
+    "de": "Fernöstliche Schuljungenuniform",
+    "fr": "Uniforme d'étudiant oriental"
+  },
+  "24": {
+    "en": "Far Eastern Schoolgirl's Uniform",
+    "ja": "東方女学生装束",
+    "de": "Fernöstliche Schulmädchenuniform",
+    "fr": "Uniforme d'étudiante orientale"
+  },
+  "25": {
+    "en": "Abes Attire",
+    "ja": "エイブスアタイア",
+    "de": "Bekleidung der Zanarkand Abes",
+    "fr": "Tenue des Zanarkand Abes"
+  },
+  "26": {
+    "en": "High Summoner's Attire",
+    "ja": "ハイサマナーアタイア",
+    "de": "Bekleidung des Hohen Mediums",
+    "fr": "Tenue de grande invocatrice"
+  },
+  "27": {
+    "en": "Ruby Carbuncle Attire",
+    "ja": "カーバンクル・ルビーアタイア",
+    "de": "Rubin-Karfunkel-Bekleidung",
+    "fr": "Tenue de Carbuncle rubis"
+  },
+  "28": {
+    "en": "Handsaint Accessories",
+    "ja": "セイントハンド・アクセサリー",
+    "de": "Handwerkerheiligen-Ausrüstung",
+    "fr": "Tenue de saint de la main"
+  },
+  "29": {
+    "en": "Landsaint Accessories",
+    "ja": "セイントランド・アクセサリー",
+    "de": "Sammlerheiligen-Ausrüstung",
+    "fr": "Tenue de saint de la terre"
+  }
+}

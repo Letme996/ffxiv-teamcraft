@@ -32,6 +32,8 @@ export class ListLayout extends DataModel {
 
   public recipeHideZoneDuplicates = false;
 
+  public includeRecipesInItems = false;
+
   public name: string;
 
   public default = false;
@@ -59,7 +61,7 @@ export class ListLayout extends DataModel {
     ]
   };
 
-  get base64(): string {
+  base64 = () => {
     const exportLayout = { ...this as any };
     delete exportLayout.userId;
     return btoa(escape(JSON.stringify(exportLayout)));

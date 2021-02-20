@@ -3,9 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { FlexLayoutModule } from '@angular/flex-layout';
-import { ClipboardModule } from 'ngx-clipboard';
 import { LayoutModule } from '@angular/cdk/layout';
-import { NgZorroAntdModule } from 'ng-zorro-antd';
 import { HuntingComponent } from './hunting/hunting.component';
 import { GatheredByComponent } from './gathered-by/gathered-by.component';
 import { InstancesComponent } from './instances/instances.component';
@@ -27,6 +25,8 @@ import { FishingBaitModule } from '../fishing-bait/fishing-bait.module';
 import { MapModule } from '../map/map.module';
 import { TooltipModule } from '../tooltip/tooltip.module';
 import { CoreModule } from '../../core/core.module';
+import { AntdSharedModule } from '../../core/antd-shared.module';
+import { NodeDetailsModule } from '../node-details/node-details.module';
 
 @NgModule({
   imports: [
@@ -38,7 +38,7 @@ import { CoreModule } from '../../core/core.module';
     ItemIconModule,
     PipesModule,
     AlarmsModule,
-    ClipboardModule,
+
     MapModule,
     FishingBaitModule,
     LayoutModule,
@@ -48,7 +48,8 @@ import { CoreModule } from '../../core/core.module';
     FlexLayoutModule,
 
     TranslateModule,
-    NgZorroAntdModule
+    AntdSharedModule,
+    NodeDetailsModule
   ],
   declarations: [
     GatheredByComponent,
@@ -65,20 +66,6 @@ import { CoreModule } from '../../core/core.module';
     RelationshipsComponent
   ],
   exports: [
-    GatheredByComponent,
-    HuntingComponent,
-    InstancesComponent,
-    ReducedFromComponent,
-    VendorsComponent,
-    VoyagesComponent,
-    VenturesComponent,
-    TradesComponent,
-    TreasuresComponent,
-    FatesComponent,
-    DesynthsComponent,
-    RelationshipsComponent
-  ],
-  entryComponents: [
     GatheredByComponent,
     HuntingComponent,
     InstancesComponent,

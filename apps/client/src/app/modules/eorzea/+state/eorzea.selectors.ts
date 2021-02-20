@@ -9,6 +9,21 @@ const getZone = createSelector(
   (state: EorzeaState) => state.zoneId
 );
 
+const getMap = createSelector(
+  getEorzeaState,
+  (state: EorzeaState) => state.mapId
+);
+
+const getPcapWeather = createSelector(
+  getEorzeaState,
+  (state: EorzeaState) => state.pcapWeather
+);
+
+const getPreviouPcapWeather = createSelector(
+  getEorzeaState,
+  (state: EorzeaState) => state.previousPcapWeather
+);
+
 const getBait = createSelector(
   getEorzeaState,
   (state: EorzeaState) => state.baitId
@@ -22,6 +37,9 @@ const getStatuses = createSelector(
 
 export const eorzeaQuery = {
   getZone,
+  getMap,
+  getPcapWeather,
+  getPreviouPcapWeather,
   getBait,
   getStatuses
 };

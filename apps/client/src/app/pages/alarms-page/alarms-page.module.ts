@@ -8,7 +8,6 @@ import { MapModule } from '../../modules/map/map.module';
 import { PipesModule } from '../../pipes/pipes.module';
 import { ItemIconModule } from '../../modules/item-icon/item-icon.module';
 import { AlarmsModule } from '../../core/alarms/alarms.module';
-import { NgZorroAntdModule } from 'ng-zorro-antd';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NameQuestionPopupModule } from '../../modules/name-question-popup/name-question-popup.module';
 import { NgDragDropModule } from 'ng-drag-drop';
@@ -16,13 +15,17 @@ import { TextQuestionPopupModule } from '../../modules/text-question-popup/text-
 import { AlarmsOptionsPopupComponent } from './alarms-options-popup/alarms-options-popup.component';
 import { PageLoaderModule } from '../../modules/page-loader/page-loader.module';
 import { FullpageMessageModule } from '../../modules/fullpage-message/fullpage-message.module';
-import { ClipboardModule } from 'ngx-clipboard';
 import { SettingsModule } from '../../modules/settings/settings.module';
 import { FlexLayoutModule } from '@angular/flex-layout';
 import { FishingBaitModule } from '../../modules/fishing-bait/fishing-bait.module';
 import { MaintenanceGuard } from '../maintenance/maintenance.guard';
 import { VersionLockGuard } from '../version-lock/version-lock.guard';
 import { CustomAlarmPopupModule } from '../../modules/custom-alarm-popup/custom-alarm-popup.module';
+
+import { ListModule } from '../../modules/list/list.module';
+import { AntdSharedModule } from '../../core/antd-shared.module';
+import { NzAvatarModule } from 'ng-zorro-antd/avatar';
+import { NzSliderModule } from 'ng-zorro-antd/slider';
 
 const routes: Routes = [
   {
@@ -42,7 +45,6 @@ const routes: Routes = [
     RouterModule.forChild(routes),
 
     TranslateModule,
-    ClipboardModule,
 
     MapModule,
     CoreModule,
@@ -57,11 +59,14 @@ const routes: Routes = [
     FishingBaitModule,
     CustomAlarmPopupModule,
 
-    NgZorroAntdModule,
-    NgDragDropModule
+    AntdSharedModule,
+    NgDragDropModule,
+
+    ListModule,
+    NzAvatarModule,
+    NzSliderModule
   ],
-  declarations: [AlarmsPageComponent, AlarmsOptionsPopupComponent],
-  entryComponents: [AlarmsOptionsPopupComponent]
+  declarations: [AlarmsPageComponent, AlarmsOptionsPopupComponent]
 })
 export class AlarmsPageModule {
 }

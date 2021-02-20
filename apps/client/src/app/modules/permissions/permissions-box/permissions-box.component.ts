@@ -10,6 +10,9 @@ import { UserService } from '../../../core/database/user.service';
 import { UserPickerService } from '../../user-picker/user-picker.service';
 import { FreecompanyPickerService } from '../../freecompany-picker/freecompany-picker.service';
 import { AuthFacade } from '../../../+state/auth.facade';
+import { TeamsFacade } from '../../teams/+state/teams.facade';
+import { Team } from '../../../model/team/team';
+import { LodestoneService } from '../../../core/api/lodestone.service';
 
 @Component({
   selector: 'app-permissions-box',
@@ -47,12 +50,20 @@ export class PermissionsBoxComponent implements OnInit {
 
   canAddFc$: Observable<boolean>;
 
-  constructor(private xivapi: XivapiService, private userService: UserService, private userPickerService: UserPickerService,
-              private freecompanyPickerService: FreecompanyPickerService, private authFacade: AuthFacade) {
+  constructor(private userService: UserService, private userPickerService: UserPickerService,
+              private freecompanyPickerService: FreecompanyPickerService, private authFacade: AuthFacade,
+              private teamsFacade: TeamsFacade, private lodestoneService: LodestoneService) {
     this.canAddFc$ = this.authFacade.mainCharacter$.pipe(map(char => char.ID > 0));
   }
 
   ngOnInit(): void {
+    if ((this.data as any).teamId !== undefined && this.data.registry[`team:${(this.data as any).teamId}`] === undefined) {
+      // Cleanup possible previous teams
+      Object.keys(this.data.registry).filter(key => key.startsWith('team:')).forEach(key => {
+        delete this.data.registry[key];
+      });
+      this.data.registry[`team:${(this.data as any).teamId}`] = PermissionLevel.PARTICIPATE;
+    }
     this.changes$.next(this.data);
     this.permissionRows$ = this.changes$.pipe(
       switchMap(data => {
@@ -67,14 +78,22 @@ export class PermissionsBoxComponent implements OnInit {
               let entityDetails$: Observable<{ name: string, avatar: string[] }>;
               // If the id has no character in it, it's a free company id, not a TC user id
               if (/^\d+$/im.test(id)) {
-                entityDetails$ = this.xivapi.getFreeCompany(id, { columns: ['FreeCompany.Name', 'FreeCompany.Crest'] }).pipe(
+                entityDetails$ = this.lodestoneService.getFreeCompany(id).pipe(
                   map((res: any) => ({ name: res.FreeCompany.Name, avatar: res.FreeCompany.Crest }))
+                );
+              } else if (id.startsWith('team:')) {
+                const teamKey = id.replace('team:', '');
+                this.teamsFacade.loadTeam(teamKey);
+                entityDetails$ = this.teamsFacade.allTeams$.pipe(
+                  map(teams => teams.find(t => t.$key === teamKey)),
+                  filter(t => t !== undefined),
+                  map((team: Team) => ({ name: team.name, avatar: [] }))
                 );
               } else {
                 entityDetails$ = this.userService.get(id).pipe(
                   first(),
                   switchMap(user => {
-                    return this.xivapi.getCharacter(user.defaultLodestoneId, { columns: ['Character.Name', 'Character.Avatar'] }).pipe(
+                    return this.lodestoneService.getCharacter(user.defaultLodestoneId).pipe(
                       map(res => ({ name: res.Character.Name, avatar: [res.Character.Avatar] }))
                     );
                   })

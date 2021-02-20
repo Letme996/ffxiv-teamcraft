@@ -24,8 +24,11 @@
   <nz-list [nzDataSource]="path" [nzHeader]="'NAVIGATION.Steps' | translate" [nzRenderItem]="stepTemplate">
     <ng-template #stepTemplate let-step>
       <nz-list-item [nzContent]="rowContent">
-        <nz-list-item-meta [nzAvatar]="avatar" [nzTitle]="step.name | i18n"
-                           nzDescription="X: {{step.x}} - Y: {{step.y}}">
+        <nz-list-item-meta [nzAvatar]="avatar" [nzTitle]="stepTitle"
+                           nzDescription="X: {{step.x | number:'1.1-1'}} - Y: {{step.y | number:'1.1-1'}}">
+          <ng-template #stepTitle>
+            {{step.name | i18n}} <img *ngIf="step.type === 'Gathering'" class="node-type-icon" [src]="step.gatheringType | nodeTypeIcon">
+          </ng-template>
           <ng-template #rowContent>
             <div fxLayout="row" fxLayoutAlign="flex-end center" fxLayoutGap="5px">
               <div *ngIf="step.type !== undefined && markedAsDone.indexOf(step) === -1">
@@ -43,9 +46,9 @@
           </ng-template>
           <ng-template #avatar>
             <img *ngIf="step.isTeleport" alt="" src="./assets/icons/Aetheryte.png">
-            <img *ngIf="!step.isTeleport && step.iconid !== undefined" alt="" class="item-icon"
-                 src="{{step.iconid | icon}}">
-            <i *ngIf="!step.isTeleport && step.iconid === undefined" class="material-icon">location_on</i>
+            <img *ngIf="!step.isTeleport && step.itemId !== undefined" alt="" class="item-icon"
+                 src="{{step.itemId | lazyIcon}}">
+            <i *ngIf="!step.isTeleport && step.itemId === undefined" class="material-icons">location_on</i>
           </ng-template>
         </nz-list-item-meta>
       </nz-list-item>

@@ -2185,24 +2185,24 @@ export const mapIds = [
   },
   {
     "id": 274,
-    "zone": 1647,
-    "name": "The Diadem",
+    "zone": 0,
+    "name": null,
     "territory": 515,
     "scale": 100,
     "weatherRate": 62
   },
   {
     "id": 275,
-    "zone": 1647,
-    "name": "The Diadem",
+    "zone": 0,
+    "name": null,
     "territory": 514,
     "scale": 100,
     "weatherRate": 61
   },
   {
     "id": 276,
-    "zone": 1647,
-    "name": "The Diadem",
+    "zone": 0,
+    "name": null,
     "territory": 512,
     "scale": 100,
     "weatherRate": 60
@@ -2674,7 +2674,7 @@ export const mapIds = [
   {
     "id": 335,
     "zone": 695,
-    "name": "Frondale's Ward for Friendless Foundlings",
+    "name": "Frondale's Home for Friendless Foundlings",
     "territory": 611,
     "scale": 800,
     "weatherRate": 0
@@ -2841,8 +2841,8 @@ export const mapIds = [
   },
   {
     "id": 356,
-    "zone": 1647,
-    "name": "The Diadem",
+    "zone": 0,
+    "name": null,
     "territory": 656,
     "scale": 100,
     "weatherRate": 71
@@ -4653,6 +4653,614 @@ export const mapIds = [
     "name": "Lyhe Mheg",
     "territory": 892,
     "scale": 400,
-    "weatherRate": 58
+    "weatherRate": 118
+  },
+  {
+    "id": 583,
+    "zone": 3442,
+    "name": "Cinder Drift",
+    "territory": 897,
+    "scale": 400,
+    "weatherRate": 28
+  },
+  {
+    "id": 584,
+    "zone": 1647,
+    "name": "The Diadem",
+    "territory": 901,
+    "scale": 100,
+    "weatherRate": 0
+  },
+  {
+    "id": 585,
+    "zone": 3467,
+    "name": "Anamnesis Anyder",
+    "territory": 898,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 586,
+    "zone": 3467,
+    "name": "Anamnesis Anyder",
+    "territory": 898,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 587,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 588,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 589,
+    "zone": 3468,
+    "name": "The Gandof Thunder Plains",
+    "territory": 902,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 590,
+    "zone": 3469,
+    "name": "Ashfall",
+    "territory": 903,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 591,
+    "zone": 3470,
+    "name": "The Halo",
+    "territory": 904,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 592,
+    "zone": 3511,
+    "name": "The Heroes' Gauntlet",
+    "territory": 916,
+    "scale": 200,
+    "weatherRate": 125
+  },
+  {
+    "id": 593,
+    "zone": 3511,
+    "name": "The Heroes' Gauntlet",
+    "territory": 916,
+    "scale": 200,
+    "weatherRate": 125
+  },
+  {
+    "id": 594,
+    "zone": 3511,
+    "name": "The Heroes' Gauntlet",
+    "territory": 916,
+    "scale": 200,
+    "weatherRate": 125
+  },
+  {
+    "id": 595,
+    "zone": 3467,
+    "name": "Anamnesis Anyder",
+    "territory": 898,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 596,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 597,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 598,
+    "zone": 3471,
+    "name": "Trial's Threshold",
+    "territory": 914,
+    "scale": 100,
+    "weatherRate": 0
+  },
+  {
+    "id": 599,
+    "zone": 3487,
+    "name": "Great Glacier",
+    "territory": 905,
+    "scale": 400,
+    "weatherRate": 46
+  },
+  {
+    "id": 600,
+    "zone": 3479,
+    "name": "Cid's Memory",
+    "territory": 911,
+    "scale": 100,
+    "weatherRate": 123
+  },
+  {
+    "id": 601,
+    "zone": 2527,
+    "name": "The Falling City of Nym",
+    "territory": 899,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 602,
+    "zone": 3488,
+    "name": "Frozen Reflections",
+    "territory": 905,
+    "scale": 400,
+    "weatherRate": 46
+  },
+  {
+    "id": 603,
+    "zone": 3478,
+    "name": "Gangos",
+    "territory": 915,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 604,
+    "zone": 3477,
+    "name": "The Endeavor",
+    "territory": 900,
+    "scale": 400,
+    "weatherRate": 14
+  },
+  {
+    "id": 605,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 606,
+    "zone": 3534,
+    "name": "Bozjan Southern Front",
+    "territory": 920,
+    "scale": 100,
+    "weatherRate": 124
+  },
+  {
+    "id": 607,
+    "zone": 3486,
+    "name": "Transmission Control",
+    "territory": 913,
+    "scale": 400,
+    "weatherRate": 123
+  },
+  {
+    "id": 608,
+    "zone": 3492,
+    "name": "The Puppets' Bunker",
+    "territory": 917,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 609,
+    "zone": 3492,
+    "name": "The Puppets' Bunker",
+    "territory": 917,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 610,
+    "zone": 3492,
+    "name": "The Puppets' Bunker",
+    "territory": 917,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 611,
+    "zone": 3492,
+    "name": "The Puppets' Bunker",
+    "territory": 917,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 612,
+    "zone": 3568,
+    "name": "The Seat of Sacrifice",
+    "territory": 922,
+    "scale": 400,
+    "weatherRate": 125
+  },
+  {
+    "id": 613,
+    "zone": 3569,
+    "name": "The Rift",
+    "territory": 922,
+    "scale": 400,
+    "weatherRate": 125
+  },
+  {
+    "id": 614,
+    "zone": 3572,
+    "name": "Anogg's Lair",
+    "territory": 895,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 615,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 616,
+    "zone": 3535,
+    "name": "Castrum Lacus Litore",
+    "territory": 920,
+    "scale": 200,
+    "weatherRate": 124
+  },
+  {
+    "id": 617,
+    "zone": 3571,
+    "name": "Terncliff",
+    "territory": 919,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 618,
+    "zone": 3570,
+    "name": "Terncliff Bay",
+    "territory": 926,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 619,
+    "zone": 481,
+    "name": "The Rising Stones",
+    "territory": 351,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 620,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 621,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 622,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 623,
+    "zone": 3576,
+    "name": "The Puppets' Bunker",
+    "territory": 928,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 624,
+    "zone": 3576,
+    "name": "The Puppets' Bunker",
+    "territory": 928,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 625,
+    "zone": 3576,
+    "name": "The Puppets' Bunker",
+    "territory": 928,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 626,
+    "zone": 3576,
+    "name": "The Puppets' Bunker",
+    "territory": 928,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 627,
+    "zone": 3590,
+    "name": "Matoya's Relict",
+    "territory": 933,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 628,
+    "zone": 3590,
+    "name": "Matoya's Relict",
+    "territory": 933,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 629,
+    "zone": 3590,
+    "name": "Matoya's Relict",
+    "territory": 933,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 630,
+    "zone": 3590,
+    "name": "Matoya's Relict",
+    "territory": 933,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 631,
+    "zone": 3596,
+    "name": "Sphere of Naught",
+    "territory": 942,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 632,
+    "zone": 3635,
+    "name": "The Garden of Nowhere",
+    "territory": 945,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 633,
+    "zone": 3635,
+    "name": "The Garden of Nowhere",
+    "territory": 945,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 634,
+    "zone": 3635,
+    "name": "The Garden of Nowhere",
+    "territory": 945,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 635,
+    "zone": 3635,
+    "name": "The Garden of Nowhere",
+    "territory": 945,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 636,
+    "zone": 3635,
+    "name": "The Garden of Nowhere",
+    "territory": 945,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 637,
+    "zone": 3620,
+    "name": "Laxan Loft",
+    "territory": 943,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 638,
+    "zone": 3581,
+    "name": "Castrum Marinum Drydocks",
+    "territory": 934,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 639,
+    "zone": 3590,
+    "name": "Matoya's Relict",
+    "territory": 933,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 640,
+    "zone": 3644,
+    "name": "The Shifting Oubliettes of Lyhe Ghiah",
+    "territory": 924,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 641,
+    "zone": 3597,
+    "name": "Delubrum Reginae",
+    "territory": 936,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 642,
+    "zone": 3597,
+    "name": "Delubrum Reginae",
+    "territory": 936,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 643,
+    "zone": 3597,
+    "name": "Delubrum Reginae",
+    "territory": 936,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 644,
+    "zone": 3597,
+    "name": "Delubrum Reginae",
+    "territory": 936,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 645,
+    "zone": 3597,
+    "name": "Delubrum Reginae",
+    "territory": 936,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 646,
+    "zone": 3597,
+    "name": "Delubrum Reginae",
+    "territory": 936,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 647,
+    "zone": 3597,
+    "name": "Delubrum Reginae",
+    "territory": 936,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 648,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 649,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 650,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 651,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 652,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 653,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 654,
+    "zone": 3435,
+    "name": "The Firmament",
+    "territory": 886,
+    "scale": 200,
+    "weatherRate": 47
+  },
+  {
+    "id": 655,
+    "zone": 3542,
+    "name": "The Last Trace",
+    "territory": 964,
+    "scale": 200,
+    "weatherRate": 0
+  },
+  {
+    "id": 656,
+    "zone": 3595,
+    "name": "Bygone Gaol",
+    "territory": 944,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 657,
+    "zone": 3581,
+    "name": "Castrum Marinum Drydocks",
+    "territory": 967,
+    "scale": 400,
+    "weatherRate": 0
+  },
+  {
+    "id": 658,
+    "zone": 3225,
+    "name": "The Empty",
+    "territory": 965,
+    "scale": 400,
+    "weatherRate": 0
   }
 ];

@@ -5,8 +5,9 @@ import { debounceTime, filter, map, mergeMap, startWith, tap } from 'rxjs/operat
 import { FormControl, Validators } from '@angular/forms';
 import { Store } from '@ngrx/store';
 import { AddCharacter, AddCustomCharacter, Logout } from '../../../+state/auth.actions';
-import { NzModalRef } from 'ng-zorro-antd';
-import { TeamcraftUser } from '../../../model/user/teamcraft-user';
+import { NzModalRef } from 'ng-zorro-antd/modal';
+import { uniq } from 'lodash';
+import { LodestoneService } from '../../api/lodestone.service';
 
 @Component({
   selector: 'app-character-link-popup',
@@ -37,15 +38,54 @@ export class CharacterLinkPopupComponent {
 
   private koreanServers = ['초코보', '모그리', '카벙클', '톤베리'];
 
-  private chineseServers = ['拉诺西亚', '紫水栈桥', '幻影群岛', '摩杜纳', '神意之地', '静语庄园', '萌芽池', '延夏', '红玉海', '潮风亭', '神拳痕', '白银乡', '白金幻象', '龙巢神殿', '旅人栈桥', '拂晓之间'];
+  public chineseServers = [
+    'HongYuHai',
+    'ShenYiZhiDi',
+    'LaNuoXiYa',
+    'HuanYingQunDao',
+    'MengYaChi',
+    'YuZhouHeYin',
+    'WoXianXiRan',
+    'ChenXiWangZuo',
+    'ZiShuiZhanQiao',
+    'YanXia',
+    'JingYuZhuangYuan',
+    'MoDuNa',
+    'HaiMaoChaWu',
+    'RouFengHaiWan',
+    'HuPoYuan',
+    'HongYuHai',
+    'ShenYiZhiDi',
+    'LaNuoXiYa',
+    'HuanYingQunDao',
+    'MengYaChi',
+    'YuZhouHeYin',
+    'WoXianXiRan',
+    'ChenXiWangZuo',
+    'BaiYinXiang',
+    'BaiJinHuanXiang',
+    'ShenQuanHen',
+    'ChaoFengTing',
+    'LvRenZhanQiao',
+    'FuXiaoZhiJian',
+    'Longchaoshendian',
+    'MengYuBaoJing',
+    'ZiShuiZhanQiao',
+    'YanXia',
+    'JingYuZhuangYuan',
+    'MoDuNa',
+    'HaiMaoChaWu',
+    'RouFengHaiWan',
+    'HuPoYuan'
+  ];
 
-  constructor(private xivapi: XivapiService, private store: Store<any>, private modalRef: NzModalRef) {
+  constructor(private xivapi: XivapiService, private store: Store<any>, private modalRef: NzModalRef,
+              private lodestoneService: LodestoneService) {
     this.servers$ = this.xivapi.getServerList().pipe(
       map(servers => {
         return [
-          ...servers,
-          ...this.koreanServers.map(server => `Korean Server (${server})`),
-          ...this.chineseServers.map(server => `Chinese Server (${server})`)
+          ...uniq(servers),
+          ...this.koreanServers.map(server => `Korean Server (${server})`)
         ].sort();
       })
     );
@@ -72,7 +112,7 @@ export class CharacterLinkPopupComponent {
     this.lodestoneIdCharacter$ = this.lodestoneId.valueChanges.pipe(
       filter(id => id && id !== ''),
       mergeMap(lodestoneId => {
-        return this.xivapi.getCharacter(lodestoneId);
+        return this.lodestoneService.getCharacter(lodestoneId);
       }),
       map(response => response.Character),
       filter(character => character !== null)
@@ -81,9 +121,10 @@ export class CharacterLinkPopupComponent {
 
   setKoreanCharacter(): void {
     const fakeLodestoneId = -1 * Math.floor((Math.random() * 999999999));
-    const customCharacter = {
+    const customCharacter: Partial<Character> = {
       ID: fakeLodestoneId,
-      Name: this.characterName.value
+      Name: this.characterName.value,
+      Server: this.selectedServer.value
     };
     this.store.dispatch(new AddCharacter(fakeLodestoneId, this.useAsDefault));
     this.store.dispatch(new AddCustomCharacter(fakeLodestoneId, customCharacter));
@@ -95,7 +136,7 @@ export class CharacterLinkPopupComponent {
     this.modalRef.close();
   }
 
-  selectCharacter(character: CharacterSearchResultRow): void {
+  selectCharacter(character: CharacterSearchResultRow | Character): void {
     this.store.dispatch(new AddCharacter(character.ID, this.useAsDefault));
     this.modalRef.close();
   }

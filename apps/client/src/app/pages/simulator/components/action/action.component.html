@@ -2,8 +2,10 @@
   <div (click)="ignoreDisabled || (!disabled && !notEnoughCp)?actionclick.emit():null"
        (contextmenu)="showStateMenu?contextMenu($event, template):null"
        class="action-container">
-    <div [appXivdbActionTooltipDisabled]="tooltipDisabled"
+    <div [appXivdbActionTooltipDisabled]="tooltipDisabled || action.getId(getJobId()) < 0"
          [appXivdbActionTooltip]="action.getId(getJobId())"
+         [appXivdbActionState]="state"
+         [appXivdbActionStateColor]="getColor(state)"
          [ngClass]="{'wasted': wasted, 'disabled': disabled || notEnoughCp || !safe, 'not-enough-cp': notEnoughCp}"
          class="action">
       <img alt="{{getAlt()}}" src="{{action.getId(getJobId()) | actionIcon | xivapiIcon}}">
@@ -16,17 +18,11 @@
     </div>
   </div>
 </nz-badge>
-<ng-template #template>
-  <ul (nzClick)="close()" nz-menu nzInDropDown>
-    <li (click)="setState(states.NORMAL)" [nzSelected]="!state || state === states.NORMAL"
-        nz-menu-item>{{'SIMULATOR.STATE.Normal' | translate}}</li>
-    <li (click)="setState(states.GOOD)" [nzSelected]="state === states.GOOD"
-        nz-menu-item>{{'SIMULATOR.STATE.Good' | translate}}</li>
-    <li (click)="setState(states.EXCELLENT)" [nzSelected]="state === states.EXCELLENT"
-        nz-menu-item>{{'SIMULATOR.STATE.Excellent' | translate}}</li>
-    <li (click)="setState(states.POOR)" [nzSelected]="state === states.POOR"
-        nz-menu-item>{{'SIMULATOR.STATE.Poor' | translate}}</li>
-    <li (click)="setState(states.FAILED)" [nzSelected]="state === states.FAILED"
+<nz-dropdown-menu #template="nzDropdownMenu">
+  <ul (nzClick)="close()" nz-menu *ngIf="simulation">
+    <li *ngFor="let condition of availableConditions" (click)="setState(condition.condition)" [nzSelected]="state === condition.condition"
+        nz-menu-item>{{('SIMULATOR.STATE.' + condition.name) | translate}}</li>
+    <li (click)="failChange.next(!failed)" [nzSelected]="failed"
         nz-menu-item>{{'SIMULATOR.STATE.Fail' | translate}}</li>
   </ul>
-</ng-template>
+</nz-dropdown-menu>

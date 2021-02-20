@@ -13,16 +13,19 @@
               nzType="primary">
         <i class="material-icons">save</i>
       </button>
-      <button (nzOnConfirm)="deleteLayout(layout.$key)" [disabled]="layout.$key === undefined" [nzTitle]="'Confirm' | translate" nz-button
+      <button (nzOnConfirm)="deleteLayout(layout.$key)" [disabled]="layout.$key === undefined" [nzPopconfirmTitle]="'Confirmation' | translate" nz-button
               nz-popconfirm nzType="danger">
         <i nz-icon nzType="delete"></i>
       </button>
       <div class="spacer"></div>
-      <button (cbOnSuccess)="layoutCopied()" [cbContent]="layout.base64" [nzTitle]="'LIST_DETAILS.LAYOUT_DIALOG.Import_string' | translate" ngxClipboard nz-button
+      <button [clipboard]="layout.base64"
+              [clipboardSuccessMessage]="'LIST_DETAILS.LAYOUT_DIALOG.Import_string_copied' | translate"
+              [nzTooltipTitle]="'LIST_DETAILS.LAYOUT_DIALOG.Export_layout' | translate"
+              nz-button
               nz-tooltip>
         <i nz-icon nzType="upload"></i>
       </button>
-      <button (click)="importLayout()" [nzTitle]="'LIST_DETAILS.LAYOUT_DIALOG.Import_layout' | translate"
+      <button (click)="importLayout()" [nzTooltipTitle]="'LIST_DETAILS.LAYOUT_DIALOG.Import_layout' | translate"
               nz-button
               nz-tooltip>
         <i nz-icon nzType="download"></i>
@@ -32,7 +35,7 @@
   <nz-alert *ngIf="layout.default" [nzMessage]="'LIST_DETAILS.LAYOUT_DIALOG.Default_readonly_message' | translate"
             class="default-warning" nzShowIcon nzType="info"></nz-alert>
   <div fxLayout="column" fxLayoutGap="10px">
-    <nz-input-group nzPrefixIcon="anticon anticon-edit">
+    <nz-input-group nzPrefixIcon="edit">
       <input [(ngModel)]="layout.name" (ngModelChange)="dirty = true" [disabled]="layout.default"
              nz-input type="text">
     </nz-input-group>
@@ -47,6 +50,12 @@
         <label [(ngModel)]="layout.considerCrystalsAsItems" (ngModelChange)="dirty = true"
                [nzDisabled]="layout.default" nz-checkbox>
           {{"LIST.Enable_crystals_tracking" | translate}}
+        </label>
+      </div>
+      <div fxLayout="column" fxLayoutGap="10px">
+        <label [(ngModel)]="layout.includeRecipesInItems" (ngModelChange)="dirty = true"
+               [nzDisabled]="layout.default" nz-checkbox>
+          {{"LIST.Include_final_items_in_main_layout" | translate}}
         </label>
       </div>
       <div fxLayout="column" fxLayoutGap="10px">
@@ -68,7 +77,7 @@
         </label>
       </div>
     </nz-card>
-    <nz-card [nzTitle]="'Items' | translate">
+    <nz-card [nzTitle]="'Items' | translate" *ngIf="!layout.includeRecipesInItems">
       <div fxLayout="column" fxLayoutGap="10px">
         <div class="final-items-ordering">
           {{'LIST_DETAILS.LAYOUT.Order_by' | translate}}

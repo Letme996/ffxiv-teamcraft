@@ -13,9 +13,9 @@ import { ProgressPopupService } from '../../progress-popup/progress-popup.servic
 import { LocalizedDataService } from '../../../core/data/localized-data.service';
 import { I18nToolsService } from '../../../core/tools/i18n-tools.service';
 import { TranslateService } from '@ngx-translate/core';
-import { NzMessageService, NzModalService } from 'ng-zorro-antd';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { LazyDataService } from '../../../core/data/lazy-data.service';
-import { PriceCheckResultComponent } from '../price-check-result/price-check-result.component';
 import { NumberQuestionPopupComponent } from '../../number-question-popup/number-question-popup/number-question-popup.component';
 import { UniversalisService } from '../../../core/api/universalis.service';
 import { DataType } from '../../list/data/data-type';
@@ -120,7 +120,7 @@ export class PricingComponent implements AfterViewInit {
     const rowsToFill = rows
       .filter(row => {
         const price = this.pricingService.getPrice(row);
-        return !price.fromVendor || finalItems;
+        return this.lazyData.data.marketItems.indexOf(row.id) > -1 && !price.fromVendor || finalItems;
       });
     if (rowsToFill.length === 0) {
       return;
@@ -151,7 +151,8 @@ export class PricingComponent implements AfterViewInit {
                   hq: cheapestHq ? cheapestHq.PricePerUnit : this.pricingService.getPrice(row).hq,
                   hqServer: cheapestHq ? (<any>cheapestHq).Server : null,
                   nq: cheapestNq ? cheapestNq.PricePerUnit : this.pricingService.getPrice(row).nq,
-                  nqServer: cheapestNq ? (<any>cheapestNq).Server : null
+                  nqServer: cheapestNq ? (<any>cheapestNq).Server : null,
+                  updated: item.Updated
                 };
               })
             );
@@ -165,7 +166,8 @@ export class PricingComponent implements AfterViewInit {
           hq: res.hq,
           hqServer: res.hqServer,
           fromVendor: false,
-          fromMB: true
+          fromMB: true,
+          updated: res.updated
         });
       })
     );
@@ -185,88 +187,7 @@ export class PricingComponent implements AfterViewInit {
       });
   }
 
-  public checkPrices(rows: ListRow[]): void {
-    const stopInterval$ = new Subject<void>();
-    const allPrices = {};
-    const operations = interval(250).pipe(
-      takeUntil(stopInterval$),
-      filter(index => rows[index] !== undefined),
-      mergeMap(index => {
-        const row = rows[index];
-        return this.server$.pipe(
-          mergeMap(server => {
-            return this.xivapi.getMarketBoardItemCrossServer(Object.keys(this.lazyData.datacenters).find(dc => {
-              return this.lazyData.datacenters[dc].indexOf(server) > -1;
-            }), row.id).pipe(
-              map(res => {
-                let prices: any[] = [].concat.apply([], Object.keys(res).map(serverName => {
-                  return res[serverName].Prices.map(price => {
-                    (<any>price).Server = serverName;
-                    return price;
-                  });
-                }));
-                if (rows || this.settings.disableCrossWorld) {
-                  prices = prices.filter(price => price.Server === server);
-                }
-                const cheapestHq = prices.filter(p => p.IsHQ)
-                  .sort((a, b) => a.PricePerUnit - b.PricePerUnit)[0];
-                const cheapestNq = prices.filter(p => !p.IsHQ)
-                  .sort((a, b) => a.PricePerUnit - b.PricePerUnit)[0];
-                return {
-                  item: row,
-                  hq: cheapestHq ? cheapestHq.PricePerUnit : this.pricingService.getPrice(row).hq,
-                  hqServer: cheapestHq ? cheapestHq.Server : null,
-                  nq: cheapestNq ? cheapestNq.PricePerUnit : this.pricingService.getPrice(row).nq,
-                  nqServer: cheapestNq ? cheapestNq.Server : null
-                };
-              })
-            );
-          })
-        );
-      }),
-      tap((res) => {
-        allPrices[res.item.id] = {
-          nq: res.nq,
-          nqServer: res.nqServer,
-          hq: res.hq,
-          hqServer: res.hqServer
-        };
-      })
-    );
-    this.progressService.showProgress(operations, rows.length)
-      .pipe(
-        switchMap(() => this.list$),
-        first()
-      )
-      .subscribe((res) => {
-        if (res instanceof Error) {
-          this.message.error(this.translate.instant('MARKETBOARD.Error'));
-        } else {
-          stopInterval$.next(null);
-          this.dialog.create({
-            nzTitle: `${this.translate.instant('MARKETBOARD.Title')}`,
-            nzContent: PriceCheckResultComponent,
-            nzComponentParams: {
-              items: rows
-                .map(item => {
-                  return {
-                    ...item,
-                    cost: this.getCraftCost(item),
-                    mbPrice: allPrices[item.id]
-                  };
-                })
-                .filter(item => {
-                  return (item.mbPrice.hq > 0 && item.cost > item.mbPrice.hq) || (item.mbPrice.nq > 0 && item.cost > item.mbPrice.nq);
-                })
-            },
-            nzFooter: null,
-            nzWidth: '80vw'
-          });
-        }
-      });
-  }
-
-  private updateCosts(list: List): void {
+  public updateCosts(list: List): void {
     const items = this.topologicalSort(list.items);
     items.forEach(item => {
       this.costs[item.id] = this._getCraftCost(item, list);
@@ -282,8 +203,8 @@ export class PricingComponent implements AfterViewInit {
     this.listsFacade.updateList(list);
   }
 
-  public getEarningText(rows: ListRow[], list: List): string {
-    return rows.filter(row => row.usePrice)
+  public getEarningText = (rows: ListRow[], list: List) => {
+    return rows.filter(row => row.usePrice !== false)
       .reduce((total, row) => {
         const price = this.pricingService.getEarnings(row);
         const amount = this.pricingService.getAmount(list.$key, row, true);
@@ -298,29 +219,25 @@ export class PricingComponent implements AfterViewInit {
         }
         return `${total}\n ${this.i18n.getName(this.l12n.getItem(row.id))}: ${priceString}`;
       }, `${this.translate.instant('COMMON.Total')}: ${this.getTotalEarnings(rows, list).toLocaleString()}gil\n`);
-  }
+  };
 
-  public getSpendingText(rows: ListRow[], list: List): string {
+  public getSpendingText = (rows: ListRow[], list: List) => {
     return rows.filter(row => row.usePrice)
       .reduce((total, row) => {
         const price = this.pricingService.getPrice(row);
         const amount = this.pricingService.getAmount(list.$key, row, false);
         let priceString: string;
         if (price.hq > 0 && amount.hq > 0) {
-          priceString = `${price.hq.toLocaleString()}gil x${amount.hq}(HQ)`;
+          priceString = `${price.hq.toLocaleString()}gil x${amount.hq}(HQ) (${this.getWorldName(price.hqServer)})`;
           if (price.nq > 0 || amount.nq > 0) {
-            priceString += `, ${price.nq.toLocaleString()}gil x${amount.nq}(NQ)`;
+            priceString += `, ${price.nq.toLocaleString()}gil x${amount.nq}(NQ) (${this.getWorldName(price.nqServer)})`;
           }
         } else {
-          priceString = `${price.nq}gil x${amount.nq}(NQ)`;
+          priceString = `${price.nq}gil x${amount.nq}(NQ) (${this.getWorldName(price.nqServer)})`;
         }
         return `${total}\n ${this.i18n.getName(this.l12n.getItem(row.id))}: ${priceString}`;
       }, `${this.translate.instant('COMMON.Total')}: ${this.getTotalEarnings(rows, list).toLocaleString()}gil\n`);
-  }
-
-  public afterCopy(): void {
-    this.message.success(this.translate.instant('PRICING.Content_copied'));
-  }
+  };
 
   public getSpendingTotal(list: List): number {
     return list.finalItems.reduce((total, item) => {
@@ -379,6 +296,11 @@ export class PricingComponent implements AfterViewInit {
     if (this.pricingService.isCustomPrice(row)
       || price === 0
       || (this.pricingService.getPrice(row).fromVendor && list.finalItems.indexOf(row) === -1)) {
+
+      if (this.settings.ignoreCompletedItemInPricing && row.done >= row.amount) {
+        return 0;
+      }
+
       const prices = this.pricingService.getPrice(row);
       const amounts = this.pricingService.getAmount(list.$key, row);
       if (prices.hq > 0 && prices.hq < prices.nq) {
@@ -436,8 +358,17 @@ export class PricingComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
+    this.list$.pipe(
+      first()
+    ).subscribe(list => {
+      this.updateCosts(list);
+    });
     setTimeout(() => {
       this.cd.detectChanges();
     }, 500);
+  }
+
+  private getWorldName(world: string): string {
+    return this.i18n.getName(this.l12n.getWorldName(world));
   }
 }

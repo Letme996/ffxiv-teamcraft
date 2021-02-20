@@ -3,7 +3,7 @@ import { List } from '../../../modules/list/model/list';
 import { Inventory } from '../../../model/other/inventory';
 import { BehaviorSubject, combineLatest, Observable, ReplaySubject } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
-import { NzMessageService } from 'ng-zorro-antd';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
 
 @Component({
@@ -42,10 +42,6 @@ export class InventoryViewComponent {
         return inventory.getDisplay();
       })
     );
-  }
-
-  copied(key: string, args?: any): void {
-    this.messageService.success(this.translate.instant(key, args));
   }
 
 }

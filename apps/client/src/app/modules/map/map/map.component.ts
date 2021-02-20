@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { MapData } from '../map-data';
 import { Observable, ReplaySubject } from 'rxjs';
 import { MapService } from '../map.service';
@@ -9,7 +9,8 @@ import { Vector2 } from '../../../core/tools/vector2';
 @Component({
   selector: 'app-map',
   templateUrl: './map.component.html',
-  styleUrls: ['./map.component.less']
+  styleUrls: ['./map.component.less'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MapComponent implements OnInit {
 
@@ -27,13 +28,27 @@ export class MapComponent implements OnInit {
 
   private _mapId: number;
 
+  public unknownPosition = false;
+
+  _markers: MapMarker[] = [];
+
   @Input()
-  markers: MapMarker[] = [];
+  set markers(markers: MapMarker[]) {
+    this._markers = markers;
+    this.unknownPosition = markers.every(marker => !marker.x && !marker.y);
+  }
+
+  get markers(): MapMarker[] {
+    return this._markers;
+  }
 
   @Input()
   hideDbButton = false;
 
-  mapData: Observable<MapData>;
+  @Input()
+  aetheryteZIndex = 5;
+
+  mapData$: Observable<MapData>;
 
   position: Vector2 = { x: 0, y: 0 };
 
@@ -44,19 +59,32 @@ export class MapComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.mapData = this.mapId$.pipe(
+    this.mapData$ = this.mapId$.pipe(
       switchMap(mapId => {
         return this.mapService.getMapById(mapId);
       })
     );
   }
 
-  getMarkerStyle(map: MapData, marker: MapMarker, offset = { x: 0, y: 0 }): any {
+  getMarkerStyle(map: MapData, marker: MapMarker, aetheryte = false): any {
     const positionPercents = this.mapService.getPositionOnMap(map, marker);
+    marker.size = marker.size || {
+      x: 32,
+      y: 32
+    };
+
+    if (!marker.iconType && !aetheryte) {
+      marker.size = {
+        x: 0,
+        y: 0
+      };
+    }
     return {
-      top: `${positionPercents.y + offset.y}%`,
-      left: `${positionPercents.x + offset.y}%`,
-      'z-index': marker.zIndex || 5,
+      top: `${positionPercents.y}%`,
+      left: `${positionPercents.x}%`,
+      'margin-top': `-${marker.size.y / 2}px`,
+      'margin-left': `-${marker.size.x / 2}px`,
+      'z-index': marker.zIndex || aetheryte ? this.aetheryteZIndex : 5,
       ...(marker.additionalStyle || {})
     };
   }

@@ -4,7 +4,8 @@ import { TranslateService } from '@ngx-translate/core';
 import { PlatformService } from '../../../core/tools/platform.service';
 import { AuthFacade } from '../../../+state/auth.facade';
 import { AngularFireAuth } from '@angular/fire/auth';
-import { NzMessageService, NzModalService } from 'ng-zorro-antd';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { filter, first, map, switchMap, tap } from 'rxjs/operators';
 import { IpcService } from '../../../core/electron/ipc.service';
 import { Router } from '@angular/router';
@@ -14,8 +15,16 @@ import { TeamcraftUser } from '../../../model/user/teamcraft-user';
 import { CustomLinksFacade } from '../../custom-links/+state/custom-links.facade';
 import { CustomLink } from '../../../core/database/custom-links/custom-link';
 import { Theme } from '../theme';
-import { aetherytes } from '../../../core/data/sources/aetherytes';
 import { NameQuestionPopupComponent } from '../../name-question-popup/name-question-popup/name-question-popup.component';
+import { InventoryFacade } from '../../inventory/+state/inventory.facade';
+import { uniq } from 'lodash';
+import { LazyDataService } from '../../../core/data/lazy-data.service';
+import { MappyReporterService } from '../../../core/electron/mappy/mappy-reporter';
+import { from, Subscription } from 'rxjs';
+import { NavigationSidebarService } from '../../navigation-sidebar/navigation-sidebar.service';
+import { Observable } from 'rxjs/Observable';
+import { SidebarItem } from '../../navigation-sidebar/sidebar-entry';
+import { saveAs } from 'file-saver';
 
 @Component({
   selector: 'app-settings-popup',
@@ -27,6 +36,8 @@ export class SettingsPopupComponent {
   selectedTab = 0;
 
   availableLanguages = this.settings.availableLocales;
+
+  availableRegions = this.settings.availableRegions;
 
   loggedIn$ = this.authFacade.loggedIn$;
 
@@ -42,11 +53,25 @@ export class SettingsPopupComponent {
 
   startMinimized = false;
 
-  alwaysQuit = false;
+  alwaysQuit = true;
+
+  noShortcut = false;
+
+  metricsPath = '';
+
+  watchFilesPath = '';
+
+  proxyType: '' | 'http' | 'https' | 'socks4' | 'socks5' | 'pac' | 'custom' = '';
+
+  proxyValue = '';
+
+  proxyBypass = '';
 
   customTheme: Theme;
 
-  public sounds = ['Confirm', 'Full_Party', 'Feature_unlocked'];
+  sounds = ['Confirm', 'Full_Party', 'Feature_unlocked'];
+
+  rawsock = false;
 
   startingPlaces = [
     {
@@ -75,9 +100,23 @@ export class SettingsPopupComponent {
     }
   ];
 
-  public allAetherytes = aetherytes.filter(a => a.nameid !== 0);
+  public sidebarItems$: Observable<SidebarItem[]> = this.navigationSidebarService.allLinks$.pipe(first());
 
-  public favoriteAetherytes = this.settings.favoriteAetherytes;
+  public allAetherytes = this.lazyData.data.aetherytes.filter(a => a.nameid !== 0);
+
+  public sidebarFavorites = [...this.settings.sidebarFavorites];
+
+  public favoriteAetherytes = [...this.settings.favoriteAetherytes];
+
+  public ignoredInventories = [...this.settings.ignoredInventories];
+
+  public inventories$ = this.inventoryFacade.inventory$.pipe(
+    map(inventory => {
+      return uniq(inventory
+        .toArray()
+        .map(item => this.inventoryFacade.getContainerTranslateKey(item)));
+    })
+  );
 
   public get trackItemsOnSale(): boolean {
     return localStorage.getItem('trackItemsOnSale') === 'true';
@@ -87,17 +126,33 @@ export class SettingsPopupComponent {
     localStorage.setItem('trackItemsOnSale', trackItemsOnSale.toString());
   }
 
+  public get proxyExample(): string {
+    switch (this.proxyType) {
+      case '':
+        return '';
+      case 'pac':
+        return 'http://127.0.0.1:1080/pac';
+      case 'custom':
+        const help = 'https://www.electronjs.org/docs/api/session#sessetproxyconfig';
+        return `<a href="${help}" target="_blank">${help}</a>`;
+      default:
+        return '127.0.0.1:8080';
+    }
+  }
+
   constructor(public settings: SettingsService, public translate: TranslateService,
               public platform: PlatformService, private authFacade: AuthFacade,
               private af: AngularFireAuth, private message: NzMessageService,
-              private ipc: IpcService, private router: Router, private http: HttpClient,
+              public ipc: IpcService, private router: Router, private http: HttpClient,
               private userService: UserService, private customLinksFacade: CustomLinksFacade,
-              private dialog: NzModalService) {
+              private dialog: NzModalService, private inventoryFacade: InventoryFacade,
+              private lazyData: LazyDataService, private mappy: MappyReporterService,
+              private navigationSidebarService: NavigationSidebarService) {
 
     this.ipc.once('always-on-top:value', (event, value) => {
       this.alwaysOnTop = value;
     });
-    this.ipc.once('toggle-machina:value', (event, value) => {
+    this.ipc.on('toggle-machina:value', (event, value) => {
       this.machinaToggle = value;
     });
     this.ipc.once('start-minimized:value', (event, value) => {
@@ -106,15 +161,114 @@ export class SettingsPopupComponent {
     this.ipc.once('always-quit:value', (event, value) => {
       this.alwaysQuit = value;
     });
+    this.ipc.once('no-shortcut:value', (event, value) => {
+      this.noShortcut = value;
+    });
+    this.ipc.on('metrics:path:value', (event, value) => {
+      this.metricsPath = value;
+    });
+    this.ipc.on('dat:path:value', (event, value) => {
+      this.watchFilesPath = value;
+    });
+    this.ipc.once('proxy-rule:value', (event, value: string) => {
+      if (!value) {
+        if (this.proxyType !== 'pac') {
+          this.proxyType = '';
+          this.proxyValue = '';
+        }
+
+        return;
+      }
+
+      // https://www.electronjs.org/docs/api/session#sessetproxyconfig
+      if ([';', '=', ','].some(chr => value.includes(chr))) {
+        this.proxyType = 'custom';
+        this.proxyValue = value;
+        return;
+      }
+
+      let [scheme, host] = value.split('://');
+      if (!host) {
+        host = scheme;
+        scheme = 'http';
+      } else if (!['http', 'https', 'socks4', 'socks5'].includes(scheme)) {
+        this.proxyType = 'custom';
+        this.proxyValue = value;
+        return;
+      }
+
+      this.proxyType = scheme as any;
+      this.proxyValue = host;
+    });
+    this.ipc.on('rawsock:value', (event, value) => {
+      this.rawsock = value;
+    });
+    this.ipc.once('proxy-bypass:value', (event, value) => {
+      this.proxyBypass = value;
+    });
+    this.ipc.once('proxy-pac:value', (event, value) => {
+      if (value) {
+        this.proxyType = 'pac';
+        this.proxyValue = value;
+      }
+    });
     this.ipc.send('always-on-top:get');
+    this.ipc.send('no-shortcut:get');
     this.ipc.send('toggle-machina:get');
     this.ipc.send('start-minimized:get');
     this.ipc.send('always-quit:get');
+    this.ipc.send('proxy-rule:get');
+    this.ipc.send('proxy-bypass:get');
+    this.ipc.send('proxy-pac:get');
+    this.ipc.send('metrics:path:get');
+    this.ipc.send('dat:path:get');
+    this.ipc.send('rawsock:get');
     this.customTheme = this.settings.customTheme;
+  }
+
+  changeMetricsPath(): void {
+    this.ipc.send('metrics:path:set');
+  }
+
+  changeWatchFilesPath(): void {
+    this.ipc.send('dat:path:set');
+  }
+
+  setProxy({ rule = '', pac = '' } = {}): void {
+    this.ipc.send('proxy-rule', rule || '');
+    this.ipc.send('proxy-pac', pac || '');
+  }
+
+  commitProxy(): void {
+    if (this.proxyType === '') {
+      this.setProxy();
+      return;
+    }
+
+    if (!this.proxyValue) {
+      // Wait for value changes
+      return;
+    }
+
+    switch (this.proxyType) {
+      case 'custom':
+        this.setProxy({ rule: this.proxyValue });
+        break;
+      case 'pac':
+        this.setProxy({ pac: this.proxyValue });
+        break;
+      default:
+        this.setProxy({ rule: `${this.proxyType}://${this.proxyValue}` });
+        break;
+    }
   }
 
   alwaysOnTopChange(value: boolean): void {
     this.ipc.send('always-on-top', value);
+  }
+
+  noShortcutChange(value: boolean): void {
+    this.ipc.send('no-shortcut', value);
   }
 
   startMinimizedChange(value: boolean): void {
@@ -125,6 +279,12 @@ export class SettingsPopupComponent {
     this.ipc.send('always-quit', value);
   }
 
+  startMappy(): void {
+    if (!this.mappy.available) {
+      this.mappy.start();
+    }
+  }
+
   machinaToggleChange(value: boolean): void {
     if (value) {
       this.settings.enableUniversalisSourcing = true;
@@ -132,8 +292,58 @@ export class SettingsPopupComponent {
     this.ipc.send('toggle-machina', value);
   }
 
+  rawsockChange(value: boolean): void {
+    this.ipc.send('rawsock', value);
+  }
+
   openDesktopConsole(): void {
     this.ipc.send('show-devtools');
+  }
+
+  downloadSettings(): void {
+    const blob = new Blob([JSON.stringify(this.settings.cache)], { type: 'text/plain;charset:utf-8' });
+    saveAs(blob, `settings.json`);
+  }
+
+  public handleFile = (event: any) => {
+    const reader = new FileReader();
+    let data = '';
+    reader.onload = ((_) => {
+      return (e) => {
+        data += e.target.result;
+      };
+    })(event.file);
+    reader.onloadend = () => {
+      try {
+        this.settings.cache = JSON.parse(data);
+        if (this.ipc) {
+          this.ipc.send('apply-settings', { ...this.settings.cache });
+        }
+        this.settings.settingsChange$.next('');
+        this.message.success(this.translate.instant('SETTINGS.Import_successful'));
+      } catch (e) {
+        console.error(e);
+        this.message.error(this.translate.instant('SETTINGS.Import_error'));
+      }
+    };
+    // Read in the image file as a data URL.
+    reader.readAsText(event.file);
+    return new Subscription();
+  };
+
+  resetLinkedChars(): void {
+    this.authFacade.user$.pipe(
+      first(),
+      map(user => {
+        user.lodestoneIds = user.lodestoneIds.map(entry => {
+          delete entry.contentId;
+          return entry;
+        });
+        return user;
+      })
+    ).subscribe(user => {
+      this.authFacade.updateUser(user);
+    });
   }
 
   clearCache(): void {
@@ -175,21 +385,27 @@ export class SettingsPopupComponent {
   }
 
   resetPassword(): void {
-    this.af.auth.sendPasswordResetEmail(this.af.auth.currentUser.email).then(() => {
+    this.af.user.pipe(
+      switchMap(user => {
+        return from(this.af.sendPasswordResetEmail(user.email));
+      })).subscribe(() => {
       this.message.success(this.translate.instant('SETTINGS.Password_reset_mail_sent'));
     });
   }
 
   updateEmail(): void {
-    this.dialog.create({
-      nzContent: NameQuestionPopupComponent,
-      nzComponentParams: {
-        type: 'email',
-        baseName: this.af.auth.currentUser.email
-      },
-      nzFooter: null,
-      nzTitle: this.translate.instant('SETTINGS.Change_email')
-    }).afterClose.pipe(
+    this.af.user.pipe(
+      switchMap(user => {
+        return this.dialog.create({
+          nzContent: NameQuestionPopupComponent,
+          nzComponentParams: {
+            type: 'email',
+            baseName: user.email
+          },
+          nzFooter: null,
+          nzTitle: this.translate.instant('SETTINGS.Change_email')
+        }).afterClose;
+      }),
       filter(email => email !== undefined),
       switchMap(email => this.authFacade.changeEmail(email))
     ).subscribe(() => {
@@ -248,6 +464,21 @@ export class SettingsPopupComponent {
   public setSound(sound: string): void {
     this.settings.autofillCompletionSound = sound;
     this.previewSound();
+  }
+
+  public onMappyEnableChange(enabled: boolean): void {
+    if (enabled) {
+      this.mappy.start();
+    } else {
+      this.mappy.stop();
+    }
+  }
+
+  public disconnectPatreon(user: TeamcraftUser): void {
+    delete user.patreonToken;
+    delete user.patreonRefreshToken;
+    delete user.lastPatreonRefresh;
+    this.authFacade.updateUser(user);
   }
 
 }

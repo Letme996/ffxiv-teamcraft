@@ -2,7 +2,6 @@ import { UserInventory } from '../../../model/user/inventory/user-inventory';
 import { InventoryItem } from '../../../model/user/inventory/inventory-item';
 import { InjectionToken } from '@angular/core';
 import { ListRow } from '../../../modules/list/model/list-row';
-import { LazyDataService } from '../../../core/data/lazy-data.service';
 import { ContainerType } from '../../../model/user/inventory/container-type';
 
 export const INVENTORY_OPTIMIZER: InjectionToken<InventoryOptimizer> = new InjectionToken('InventoryOptimizer');
@@ -14,20 +13,38 @@ export abstract class InventoryOptimizer {
     ContainerType.FreeCompanyBag0,
     ContainerType.FreeCompanyBag1,
     ContainerType.FreeCompanyBag2,
+    ContainerType.FreeCompanyBag3,
+    ContainerType.FreeCompanyBag4,
+    ContainerType.FreeCompanyBag5,
+    ContainerType.FreeCompanyBag6,
+    ContainerType.FreeCompanyBag7,
+    ContainerType.FreeCompanyBag8,
+    ContainerType.FreeCompanyBag9,
+    ContainerType.FreeCompanyBag10,
     ContainerType.RetainerMarket,
     ContainerType.RetainerEquippedGear,
     ContainerType.Crystal,
     ContainerType.RetainerCrystal,
     ContainerType.HandIn,
     ContainerType.RetainerGil,
-    ContainerType.FreeCompanyGil
+    ContainerType.FreeCompanyGil,
+    ContainerType.GearSet0,
+    ContainerType.GearSet1,
+    ContainerType.Mail,
+    ContainerType.UNKNOWN_1
   ];
 
-  public getOptimization(item: InventoryItem, inventory: UserInventory, lazyData: LazyDataService): { [p: string]: number | string } | null {
+  /// Compare two InventoryItem objects to determine whether they consume the same slot in the same
+  /// container.
+  protected static inSameSlot(source: InventoryItem, target: InventoryItem): boolean {
+    return source.slot === target.slot && source.containerId === target.containerId;
+  }
+
+  public getOptimization(item: InventoryItem, inventory: UserInventory, extracts: Record<number, ListRow>): { [p: string]: number | string } | null {
     if (InventoryOptimizer.IGNORED_CONTAINERS.indexOf(item.containerId) > -1) {
       return null;
     }
-    const data = lazyData.extracts.find(i => i.id === item.itemId);
+    const data = extracts[item.itemId];
     return this._getOptimization(item, inventory, data);
   }
 

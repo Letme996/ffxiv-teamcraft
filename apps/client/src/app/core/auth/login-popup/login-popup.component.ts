@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AuthFacade } from '../../../+state/auth.facade';
-import { NzMessageService, NzModalRef } from 'ng-zorro-antd';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalRef } from 'ng-zorro-antd/modal';
 import { PlatformService } from '../../tools/platform.service';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -29,7 +30,7 @@ export class LoginPopupComponent {
     delete this.errorMessageCode;
     this.authFacade.login(this.form.value.email, this.form.value.password)
       .then(() => {
-        this.modalRef.close();
+        this.modalRef.close(true);
       })
       .catch(err => this.onError(err));
   }
@@ -38,7 +39,7 @@ export class LoginPopupComponent {
     const email = this.form.getRawValue().email;
     this.authFacade.resetPassword(email);
     this.message.success(this.translate.instant('SETTINGS.Password_reset_mail_sent'));
-    this.modalRef.close();
+    this.modalRef.close(false);
   }
 
   private onError(error: any): void {
@@ -48,14 +49,7 @@ export class LoginPopupComponent {
   public googleOauth(): void {
     delete this.errorMessageCode;
     this.authFacade.googleOauth().subscribe(() => {
-      this.modalRef.close();
-    });
-  }
-
-  public facebookOauth(): void {
-    delete this.errorMessageCode;
-    this.authFacade.facebookOauth().subscribe(() => {
-      this.modalRef.close();
+      this.modalRef.close(true);
     });
   }
 

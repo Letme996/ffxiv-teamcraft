@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RotationsFacade } from '../../../../modules/rotations/+state/rotations.facade';
 import { CraftingRotation } from '../../../../model/other/crafting-rotation';
 import { Observable } from 'rxjs/Observable';
-import { NzModalService } from 'ng-zorro-antd';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { TranslateService } from '@ngx-translate/core';
 import { RecipeChoicePopupComponent } from '../recipe-choice-popup/recipe-choice-popup.component';
 import { NameQuestionPopupComponent } from '../../../../modules/name-question-popup/name-question-popup/name-question-popup.component';
@@ -14,9 +14,12 @@ import { combineLatest } from 'rxjs';
 @Component({
   selector: 'app-rotations-page',
   templateUrl: './rotations-page.component.html',
-  styleUrls: ['./rotations-page.component.less']
+  styleUrls: ['./rotations-page.component.less'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RotationsPageComponent {
+
+  public loading$ = this.rotationsFacade.loading$;
 
   public rotations$: Observable<CraftingRotation[]>;
 
@@ -24,6 +27,7 @@ export class RotationsPageComponent {
 
   constructor(private rotationsFacade: RotationsFacade, private dialog: NzModalService, private translate: TranslateService,
               private foldersFacade: RotationFoldersFacade) {
+    this.rotationsFacade.loadMyRotations();
     this.rotationFoldersDisplay$ = combineLatest([this.foldersFacade.myRotationFolders$, this.rotationsFacade.myRotations$]).pipe(
       tap(([folders, rotations]) => {
         const fixedFolders = folders

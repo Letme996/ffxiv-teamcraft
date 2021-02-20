@@ -1,102 +1,127 @@
-import { ChangeDetectionStrategy, Component, Inject } from '@angular/core';
+import { Component, Inject } from '@angular/core';
 import { InventoryFacade } from '../../../modules/inventory/+state/inventory.facade';
 import { INVENTORY_OPTIMIZER, InventoryOptimizer } from '../optimizations/inventory-optimizer';
 import { LazyDataService } from '../../../core/data/lazy-data.service';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { map, switchMap, switchMapTo, tap } from 'rxjs/operators';
+import { BehaviorSubject, combineLatest, Observable } from 'rxjs';
+import { filter, map, startWith, switchMap, switchMapTo, tap } from 'rxjs/operators';
 import { InventoryOptimization } from '../inventory-optimization';
 import { InventoryItem } from '../../../model/user/inventory/inventory-item';
 import * as _ from 'lodash';
+import { uniq, uniqBy } from 'lodash';
 import { ContainerType } from '../../../model/user/inventory/container-type';
-import { NzMessageService } from 'ng-zorro-antd';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
 import { HasTooFew } from '../optimizations/has-too-few';
+import { ListRow } from '../../../modules/list/model/list-row';
+import { ConsolidateStacks } from '../optimizations/consolidate-stacks';
+import { UnwantedMaterials } from '../optimizations/unwanted-materials';
+import { SettingsService } from '../../../modules/settings/settings.service';
+import { LocalizedDataService } from '../../../core/data/localized-data.service';
+import { CanBeBought } from '../optimizations/can-be-bought';
 
 @Component({
   selector: 'app-inventory-optimizer',
   templateUrl: './inventory-optimizer.component.html',
-  styleUrls: ['./inventory-optimizer.component.less'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrls: ['./inventory-optimizer.component.less']
 })
 export class InventoryOptimizerComponent {
 
-  public resultsReloader$: BehaviorSubject<void> = new BehaviorSubject<void>(null);
-
   public reloader$: BehaviorSubject<void> = new BehaviorSubject<void>(null);
 
-  public optimizations$: Observable<InventoryOptimization[]> = this.resultsReloader$.pipe(
-    switchMapTo(this.inventoryFacade.inventory$.pipe(
-      map(inventory => {
-        return this.optimizers
-          .map(optimizer => {
-            const entries = inventory.toArray()
-              .filter(item => {
-                return [
-                  ContainerType.RetainerMarket,
-                  ContainerType.RetainerEquippedGear
-                ].indexOf(item.containerId) === -1;
-              })
-              .map(item => {
+  public optimizations$: Observable<InventoryOptimization[]> = this.lazyData.extracts$.pipe(
+    switchMap((extracts: ListRow[]) => {
+      return combineLatest([
+        this.settings.settingsChange$.pipe(
+          filter(change => {
+            return change.startsWith('optimizer:');
+          }),
+          startWith(0)
+        ),
+        this.reloader$
+      ]).pipe(
+        switchMapTo(this.inventoryFacade.inventory$.pipe(
+          map(inventory => {
+            return this.optimizers
+              .filter(optimizer => this.showHidden || !this.hiddenArray.some(o => o.optimizerId === optimizer.getId()))
+              .map(optimizer => {
+                const entries = inventory.toArray()
+                  .filter(item => {
+                    return item.contentId === inventory.contentId
+                      && this.settings.ignoredInventories.indexOf(this.inventoryFacade.getContainerDisplayName(item)) === -1
+                      && [
+                        ContainerType.RetainerMarket,
+                        ContainerType.RetainerEquippedGear
+                      ].indexOf(item.containerId) === -1;
+                  })
+                  .map(item => {
+                    return {
+                      item: item,
+                      containerName: this.getContainerName(item),
+                      isRetainer: item.retainerName !== undefined,
+                      messageParams: optimizer.getOptimization(item, inventory, extracts)
+                    };
+                  })
+                  .filter(optimization => optimization.messageParams !== null);
                 return {
-                  item: item,
-                  containerName: this.getContainerName(item),
-                  isRetainer: item.retainerName !== undefined,
-                  messageParams: optimizer.getOptimization(item, inventory, this.lazyData)
+                  type: optimizer.getId(),
+                  entries: _.chain(entries)
+                    .groupBy('containerName')
+                    .map((value, key) => ({ containerName: key, isRetainer: value[0].isRetainer, items: value }))
+                    .value(),
+                  totalLength: uniqBy(entries, 'item.itemId').length
                 };
-              })
-              .filter(optimization => optimization.messageParams !== null);
-            return {
-              type: optimizer.getId(),
-              entries: _.chain(entries)
-                .groupBy('containerName')
-                .map((value, key) => ({ containerName: key, isRetainer: value[0].isRetainer, items: value }))
-                .value(),
-              totalLength: entries.length
-            };
+              });
           })
-          .filter(res => res.entries.length > 0);
-      })
-    )),
-    tap(() => this.loading = false)
+        )),
+        tap(() => this.loading = false)
+      );
+    })
   );
 
   public display$: Observable<InventoryOptimization[]> = this.optimizations$.pipe(
-    switchMap(optimizations => {
-      return this.reloader$.pipe(
-        map(() => {
-          return optimizations.map(opt => {
-            let totalLength = 0;
-            opt.entries = opt.entries.map(entry => {
-              entry.ignored = this.ignoreArray.some(ignored => {
-                return ignored.containerName === entry.containerName && ignored.id === opt.type;
-              });
-              entry.items = entry.items.map(item => {
-                item.ignored = this.ignoreArray.some(ignored => {
-                  return ignored.itemId === item.item.itemId && ignored.id === opt.type;
-                });
-                return item;
-              });
-              if (this.showIgnored) {
-                entry.totalLength = entry.items.length;
-              } else {
-                entry.totalLength = entry.items.filter(i => !i.ignored).length;
-              }
-              if (this.showIgnored || !entry.ignored) {
-                totalLength += entry.totalLength;
-              }
-              return entry;
+    map((optimizations) => {
+      return JSON.parse(JSON.stringify(optimizations)).map(opt => {
+        const total: number[] = [];
+        opt.entries = opt.entries.map(entry => {
+          entry.ignored = this.ignoreArray.some(ignored => {
+            return ignored.containerName === entry.containerName && ignored.id === opt.type;
+          });
+          entry.items = entry.items.map(item => {
+            item.ignored = this.ignoreArray.some(ignored => {
+              return ignored.itemId === item.item.itemId && ignored.id === opt.type;
             });
-            opt.totalLength = totalLength;
-            return opt;
-          }).filter(opt => opt.totalLength > 0);
-        })
-      );
+            return item;
+          }).filter(item => {
+            return this.showIgnored || !item.ignored;
+          });
+          if (this.showIgnored) {
+            entry.totalLength = entry.items.length;
+          } else {
+            entry.totalLength = entry.items.filter(i => !i.ignored).length;
+          }
+          if (this.showIgnored || !entry.ignored) {
+            total.push(...entry.items.map(i => i.item.itemId));
+          }
+          return entry;
+        });
+        opt.hidden = this.hiddenArray.some(hidden => {
+          return hidden.optimizerId === opt.type;
+        });
+        opt.totalLength = uniq(total).length;
+        return opt;
+      });
     })
   );
 
   public ignoreArray: { id: string, itemId: number, containerName?: string }[] = JSON.parse(localStorage.getItem(`optimizations:ignored`) || '[]');
 
+  //hiddenArray tracks hidden optimizers
+  public hiddenArray: { optimizerId: string }[] = JSON.parse(localStorage.getItem('optimizations:hidden') || '[]');
+
   public showIgnored = false;
+
+  //for showing hidden optimizers
+  public showHidden = false;
 
   public loading = false;
 
@@ -108,11 +133,23 @@ export class InventoryOptimizerComponent {
     if (size > 0) {
       localStorage.setItem(HasTooFew.THRESHOLD_KEY, size.toString());
       this.loading = true;
-      this.resultsReloader$.next(null);
+      this.reloader$.next();
     }
   }
 
-  constructor(private inventoryFacade: InventoryFacade,
+  public get maximumVendorPrice(): number {
+    return +(localStorage.getItem(CanBeBought.MAXIMUM_PRICE_KEY) || 50000);
+  }
+
+  public set maximumVendorPrice(price: number) {
+    if (price > 0) {
+      localStorage.setItem(CanBeBought.MAXIMUM_PRICE_KEY, price.toString());
+      this.loading = true;
+      this.reloader$.next();
+    }
+  }
+
+  constructor(private inventoryFacade: InventoryFacade, private settings: SettingsService, private l12n: LocalizedDataService,
               @Inject(INVENTORY_OPTIMIZER) private optimizers: InventoryOptimizer[],
               private lazyData: LazyDataService, private message: NzMessageService, private translate: TranslateService) {
   }
@@ -121,8 +158,63 @@ export class InventoryOptimizerComponent {
     return item.retainerName || this.inventoryFacade.getContainerName(item.containerId);
   }
 
+  public getExpansions() {
+    return this.l12n.getExpansions();
+  }
+
+  public resetInventory(): void {
+    this.inventoryFacade.resetInventory();
+  }
+
+  public get selectedExpansion(): number {
+    const selection = localStorage.getItem(ConsolidateStacks.SELECTION_KEY);
+    return selection ? +selection : null;
+  }
+
+  public set selectedExpansion(selection: number) {
+    if (selection !== null) {
+      localStorage.setItem(ConsolidateStacks.SELECTION_KEY, selection.toString());
+    } else {
+      localStorage.removeItem(ConsolidateStacks.SELECTION_KEY);
+    }
+
+    this.loading = true;
+    this.reloader$.next();
+  }
+
+  public get minRecipeIlvl(): number {
+    return +(localStorage.getItem(UnwantedMaterials.RECIPE_ILVL_KEY) || 1);
+  }
+
+  public set minRecipeIlvl(size: number) {
+    if (size > 0) {
+      localStorage.setItem(UnwantedMaterials.RECIPE_ILVL_KEY, size.toString());
+      this.loading = true;
+      this.reloader$.next();
+    }
+  }
+
   nameCopied(key: string, args?: any): void {
     this.message.success(this.translate.instant(key, args));
+  }
+
+  public setHideOptimizer(optimizer: string, hidden: boolean): void {
+    if (hidden) {
+      this.hiddenArray = [
+        ...this.hiddenArray,
+        {
+          optimizerId: optimizer
+        }
+      ];
+    } else {
+      this.hiddenArray = this.hiddenArray.filter(o => o.optimizerId !== optimizer);
+    }
+    this.setHiddenArray(this.hiddenArray);
+    this.reloader$.next();
+  }
+
+  private setHiddenArray(array: { optimizerId: string }[]): void {
+    localStorage.setItem('optimizations:hidden', JSON.stringify(array));
   }
 
   public setIgnoreItemOptimization(itemId: number, optimization: string, ignore: boolean): void {

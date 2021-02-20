@@ -4,6 +4,7 @@ import { TradeIconPipe } from '../../../pipes/pipes/trade-icon.pipe';
 import { TradeSource } from '../../../modules/list/model/trade-source';
 import { TradeEntry } from '../../../modules/list/model/trade-entry';
 import { DataType } from '../../../modules/list/data/data-type';
+import { uniqBy } from 'lodash';
 
 @Component({
   selector: 'app-total-panel-price-popup',
@@ -21,12 +22,23 @@ export class TotalPanelPricePopupComponent implements OnInit {
   getTradeSourceByPriority(tradeSources: TradeSource[]): TradeSource {
     return tradeSources
       .filter(source => {
-        return this.getFilteredCurrencies(source.trades[0].currencies).length > 0;
+        return this.getTradeEntries(source).length > 0;
       })
       .sort((a, b) => {
-        return TradeIconPipe.TRADE_SOURCES_PRIORITIES[this.getFilteredCurrencies(a.trades[0].currencies)[0].id]
-        > TradeIconPipe.TRADE_SOURCES_PRIORITIES[this.getFilteredCurrencies(b.trades[0].currencies)[0].id] ? 1 : -1;
+        return TradeIconPipe.TRADE_SOURCES_PRIORITIES[this.getTradeEntries(b)[0].id]
+          - TradeIconPipe.TRADE_SOURCES_PRIORITIES[this.getTradeEntries(a)[0].id];
       })[0];
+  }
+
+  private getTradeEntries(...tradeSources: TradeSource[]): TradeEntry[] {
+    return [].concat.apply([], tradeSources.map(tradeSource => {
+      return tradeSource.trades.reduce((acc, trade) => {
+        return [
+          ...acc,
+          ...this.getFilteredCurrencies(trade.currencies)
+        ];
+      }, []);
+    }));
   }
 
   private getFilteredCurrencies(currencies: TradeEntry[]): TradeEntry[] {
@@ -35,7 +47,7 @@ export class TotalPanelPricePopupComponent implements OnInit {
     });
   }
 
-  private computePrice(): void {
+  public computePrice(): void {
     this.totalPrice = this.panelContent.reduce((result, row) => {
       const vendors = getItemSource(row, DataType.VENDORS);
       const tradeSources = getItemSource(row, DataType.TRADE_SOURCES);
@@ -55,9 +67,15 @@ export class TotalPanelPricePopupComponent implements OnInit {
         const trade = tradeSource.trades[0];
         const itemsPerTrade = trade.items.find(item => item.id === row.id).amount;
         this.getFilteredCurrencies(trade.currencies).forEach(currency => {
-          const costs = tradeSource.trades.sort((ta) => ta.items[0].hq ? 1 : -1).map(t => {
-            return Math.ceil(currency.amount * (row.amount - row.done) / itemsPerTrade);
-          });
+          const costs = tradeSource.trades
+            .sort((ta) => ta.items[0].hq ? 1 : -1)
+            .map(t => {
+              const e = t.currencies.find(c => c.id === currency.id);
+              if (e) {
+                return Math.ceil(e.amount * (row.amount - row.done) / itemsPerTrade);
+              }
+              return null;
+            });
 
           const tradeRow = result.find(r => r.currencyId === currency.id);
 
@@ -66,15 +84,11 @@ export class TotalPanelPricePopupComponent implements OnInit {
               currencyId: currency.id,
               currencyIcon: currency.icon,
               costs: costs,
-              canIgnore: [].concat.apply([], tradeSources.filter(source => {
-                return source.trades.some(t => {
-                  return this.getFilteredCurrencies(t.currencies).length > 0;
-                });
-              })).length > 1
+              canIgnore: uniqBy(this.getTradeEntries(...tradeSources), 'id').length > 1
             });
           } else {
-            tradeRow.costs[0] += costs[0];
-            tradeRow.costs[1] += costs[1];
+            tradeRow.costs[0] = (tradeRow.costs[0] || 0) + costs[0];
+            tradeRow.costs[1] = (tradeRow.costs[1] || tradeRow.costs[0]) + costs[1];
           }
         });
       }

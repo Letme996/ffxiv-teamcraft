@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { DevGuard } from './core/guard/dev.guard';
+import { ModeratorGuard } from './core/guard/moderator.guard';
 
 const routes: Routes = [
   {
@@ -20,87 +21,111 @@ const routes: Routes = [
   },
   {
     path: 'lists',
-    loadChildren: './pages/lists/lists-page.module#ListsPageModule'
+    loadChildren: () => import('./pages/lists/lists-page.module').then(m => m.ListsPageModule)
   },
   {
     path: 'list',
-    loadChildren: './pages/list-details/list-details.module#ListDetailsModule'
+    loadChildren: () => import('./pages/list-details/list-details.module').then(m => m.ListDetailsModule)
   },
   {
     path: 'workshop',
-    loadChildren: './pages/workshop-details/workshop-details.module#WorkshopDetailsModule'
+    loadChildren: () => import('./pages/workshop-details/workshop-details.module').then(m => m.WorkshopDetailsModule)
   },
   {
     path: 'search',
-    loadChildren: './pages/search/search.module#SearchModule'
+    loadChildren: () => import('./pages/search/search.module').then(m => m.SearchModule)
   },
   {
     path: 'gathering-location',
-    loadChildren: './pages/gathering-location/gathering-location.module#GatheringLocationModule'
+    loadChildren: () => import('./pages/gathering-location/gathering-location.module').then(m => m.GatheringLocationModule)
   },
   {
     path: 'gc-supply',
-    loadChildren: './pages/gc-supply/gc-supply.module#GcSupplyModule'
+    loadChildren: () => import('./pages/gc-supply/gc-supply.module').then(m => m.GcSupplyModule)
   },
   {
     path: 'levequests',
-    loadChildren: './pages/levequests/levequests.module#LevequestsModule'
+    loadChildren: () => import('./pages/levequests/levequests.module').then(m => m.LevequestsModule)
   },
   {
     path: 'log-tracker',
-    loadChildren: './pages/log-tracker/log-tracker.module#LogTrackerModule'
+    loadChildren: () => import('./pages/log-tracker/log-tracker.module').then(m => m.LogTrackerModule)
   },
   {
     path: 'alarms',
-    loadChildren: './pages/alarms-page/alarms-page.module#AlarmsPageModule'
+    loadChildren: () => import('./pages/alarms-page/alarms-page.module').then(m => m.AlarmsPageModule)
+  },
+  {
+    path: 'alarm-group',
+    loadChildren: () => import('./pages/alarm-group/alarm-group.module').then(m => m.AlarmGroupModule)
   },
   {
     path: 'alarms-overlay',
-    loadChildren: './pages/alarms-overlay/alarms-overlay.module#AlarmsOverlayModule'
+    loadChildren: () => import('./pages/alarms-overlay/alarms-overlay.module').then(m => m.AlarmsOverlayModule)
   },
   {
     path: 'fishing-reporter-overlay',
-    loadChildren: './pages/fishing-reporter-overlay/fishing-reporter-overlay.module#FishingReporterOverlayModule'
+    loadChildren: () => import('./pages/fishing-reporter-overlay/fishing-reporter-overlay.module').then(m => m.FishingReporterOverlayModule)
+  },
+  {
+    path: 'mappy',
+    loadChildren: () => import('./pages/mappy/mappy.module').then(m => m.MappyModule)
+  },
+  {
+    path: 'mappy-overlay',
+    loadChildren: () => import('./pages/mappy-overlay/mappy-overlay.module').then(m => m.MappyOverlayModule)
   },
   {
     path: 'list-panel-overlay',
-    loadChildren: './pages/list-panel-overlay/list-panel-overlay.module#ListPanelOverlayModule'
+    loadChildren: () => import('./pages/list-panel-overlay/list-panel-overlay.module').then(m => m.ListPanelOverlayModule)
   },
   {
     path: 'rotation-overlay',
-    loadChildren: './pages/rotation-overlay/rotation-overlay.module#RotationOverlayModule'
+    loadChildren: () => import('./pages/rotation-overlay/rotation-overlay.module').then(m => m.RotationOverlayModule)
+  },
+  {
+    path: 'item-search-overlay',
+    loadChildren: () => import('./pages/item-search-overlay/item-search-overlay.module').then(m => m.ItemSearchOverlayModule)
   },
   {
     path: 'community-lists',
-    loadChildren: './pages/community-lists/community-lists.module#CommunityListsModule'
+    loadChildren: () => import('./pages/community-lists/community-lists.module').then(m => m.CommunityListsModule)
+  },
+  {
+    path: 'commission',
+    loadChildren: () => import('./pages/commission/commission.module').then(m => m.CommissionModule)
+  },
+  {
+    path: 'commissions',
+    loadChildren: () => import('./pages/commissions/commissions.module').then(m => m.CommissionsModule)
   },
   {
     path: 'teams',
-    loadChildren: './pages/teams-pages/teams-pages.module#TeamsPagesModule'
+    loadChildren: () => import('./pages/teams-pages/teams-pages.module').then(m => m.TeamsPagesModule)
   },
   {
     path: 'favorites',
-    loadChildren: './pages/favorites-page/favorites-page.module#FavoritesPageModule'
+    loadChildren: () => import('./pages/favorites-page/favorites-page.module').then(m => m.FavoritesPageModule)
   },
   {
     path: 'macro-translator',
-    loadChildren: './pages/macro-translator/macro-translator.module#MacroTranslatorModule'
+    loadChildren: () => import('./pages/macro-translator/macro-translator.module').then(m => m.MacroTranslatorModule)
   },
   {
     path: 'profile',
-    loadChildren: './pages/profile/profile.module#ProfileModule'
+    loadChildren: () => import('./pages/profile/profile.module').then(m => m.ProfileModule)
   },
   {
     path: 'about',
-    loadChildren: './pages/about/about.module#AboutModule'
+    loadChildren: () => import('./pages/about/about.module').then(m => m.AboutModule)
   },
   {
     path: 'import',
-    loadChildren: './pages/import/import.module#ImportModule'
+    loadChildren: () => import('./pages/import/import.module').then(m => m.ImportModule)
   },
   {
     path: 'patreon-redirect',
-    loadChildren: './pages/patreon-redirect/patreon-redirect.module#PatreonRedirectModule'
+    loadChildren: () => import('./pages/patreon-redirect/patreon-redirect.module').then(m => m.PatreonRedirectModule)
   },
   {
     path: 'list-import/:importString',
@@ -108,60 +133,113 @@ const routes: Routes = [
   },
   {
     path: 'custom-links',
-    loadChildren: './pages/custom-links/custom-links-page.module#CustomLinksPageModule'
+    loadChildren: () => import('./pages/custom-links/custom-links-page.module').then(m => m.CustomLinksPageModule)
   },
   {
     path: 'link',
-    loadChildren: './pages/link/link.module#LinkModule'
+    loadChildren: () => import('./pages/link/link.module').then(m => m.LinkModule)
   },
   {
     path: 'template',
-    loadChildren: './pages/template/template.module#TemplateModule'
+    loadChildren: () => import('./pages/template/template.module').then(m => m.TemplateModule)
   },
   {
     path: 'custom-items',
-    loadChildren: './pages/custom-items/custom-items-page.module#CustomItemsPageModule'
+    loadChildren: () => import('./pages/custom-items/custom-items-page.module').then(m => m.CustomItemsPageModule)
   },
   {
     path: 'desynth',
-    loadChildren: './pages/desynth/desynth.module#DesynthModule'
+    loadChildren: () => import('./pages/desynth/desynth.module').then(m => m.DesynthModule)
+  },
+  {
+    path: 'retainers',
+    loadChildren: () => import('./pages/retainers/retainers.module').then(m => m.RetainersModule)
+  },
+  {
+    path: 'retainer-ventures',
+    loadChildren: () => import('./pages/retainer-ventures/retainer-ventures.module').then(m => m.RetainerVenturesModule)
   },
   {
     path: 'support-us',
-    loadChildren: './pages/support-us/support-us.module#SupportUsModule'
+    loadChildren: () => import('./pages/support-us/support-us.module').then(m => m.SupportUsModule)
   },
   {
     path: 'db',
-    loadChildren: './pages/db/db.module#DbModule'
+    loadChildren: () => import('./pages/db/db.module').then(m => m.DbModule)
   },
   {
     path: 'recipe-finder',
-    loadChildren: './pages/recipe-finder/recipe-finder.module#RecipeFinderModule'
+    loadChildren: () => import('./pages/recipe-finder/recipe-finder.module').then(m => m.RecipeFinderModule)
   },
   {
     path: 'currency-spending',
-    loadChildren: './pages/currency-spending/currency-spending.module#CurrencySpendingModule'
+    loadChildren: () => import('./pages/currency-spending/currency-spending.module').then(m => m.CurrencySpendingModule)
+  },
+  {
+    path: 'food-picker',
+    loadChildren: () => import('./pages/food-picker/food-picker.module').then(m => m.FoodPickerModule)
+  },
+  {
+    path: 'leveling-equipment',
+    loadChildren: () => import('./pages/leveling-equipment/leveling-equipment.module').then(m => m.LevelingEquipmentModule)
   },
   {
     path: 'blog',
-    loadChildren: './pages/blog/blog.module#BlogModule'
+    loadChildren: () => import('./pages/blog/blog.module').then(m => m.BlogModule)
   },
   {
     path: 'reset-timers',
-    loadChildren: './pages/reset-timers/reset-timers.module#ResetTimersModule'
+    loadChildren: () => import('./pages/reset-timers/reset-timers.module').then(m => m.ResetTimersModule)
   },
   {
     path: 'inventory',
-    loadChildren: './pages/inventory/inventory-page.module#InventoryPageModule'
+    loadChildren: () => import('./pages/inventory/inventory-page.module').then(m => m.InventoryPageModule)
   },
   {
     path: 'inventory-optimizer',
-    loadChildren: './pages/inventory-optimizer/inventory-optimizer.module#InventoryOptimizerModule'
+    loadChildren: () => import('./pages/inventory-optimizer/inventory-optimizer.module').then(m => m.InventoryOptimizerModule)
+  },
+  {
+    path: 'gearset',
+    loadChildren: () => import('./pages/gearset/gearset.module').then(m => m.GearsetModule)
+  },
+  {
+    path: 'gearset-folder',
+    loadChildren: () => import('./pages/gearset-folder/gearset-folder.module').then(m => m.GearsetFolderModule)
+  },
+  {
+    path: 'gearsets',
+    loadChildren: () => import('./pages/gearsets-page/gearsets-page.module').then(m => m.GearsetsPageModule)
+  },
+  {
+    path: 'metrics',
+    loadChildren: () => import('./pages/metrics/metrics.module').then(m => m.MetricsModule)
+  },
+  {
+    path: 'crafting-replays',
+    loadChildren: () => import('./pages/crafting-replays/crafting-replays.module').then(m => m.CraftingReplaysModule)
+  },
+  {
+    path: 'crafting-replay',
+    loadChildren: () => import('./pages/crafting-replay/crafting-replay-page.module').then(m => m.CraftingReplayPageModule)
+  },
+  {
+    path: 'crafting-replay-folder',
+    loadChildren: () => import('./pages/crafting-replay-folder/crafting-replay-folder.module').then(m => m.CraftingReplayFolderModule)
+  },
+  {
+    path: 'collectables',
+    loadChildren: () => import('./pages/collectables/collectables.module').then(m => m.CollectablesModule)
   },
   {
     path: 'extractor',
-    loadChildren: './pages/extractor/extractor.module#ExtractorModule',
+    loadChildren: () => import('./pages/extractor/extractor.module').then(m => m.ExtractorModule),
     canLoad: [DevGuard]
+  },
+  {
+    path: 'admin',
+    loadChildren: () => import('./pages/admin/admin.module').then(m => m.AdminModule),
+    canLoad: [ModeratorGuard]
   }
 ];
 

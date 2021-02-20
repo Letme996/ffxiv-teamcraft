@@ -1,13 +1,15 @@
 import { Component, OnInit } from '@angular/core';
-import { Observable, of, ReplaySubject } from 'rxjs';
+import { BehaviorSubject, Observable, of } from 'rxjs';
 import { DataService } from '../../../core/api/data.service';
-import { NzModalRef } from 'ng-zorro-antd';
+import { NzModalRef } from 'ng-zorro-antd/modal';
 import { GarlandToolsService } from '../../../core/api/garland-tools.service';
 import { HtmlToolsService } from '../../../core/tools/html-tools.service';
 import { debounceTime, filter, map, startWith, switchMap, tap } from 'rxjs/operators';
 import { SearchResult } from '../../../model/search/search-result';
 import { CustomItemsFacade } from '../../custom-items/+state/custom-items.facade';
 import { TranslateService } from '@ngx-translate/core';
+import { SettingsService } from '../../settings/settings.service';
+import { Region } from '../../settings/region.enum';
 
 @Component({
   selector: 'app-item-picker',
@@ -16,11 +18,11 @@ import { TranslateService } from '@ngx-translate/core';
 })
 export class ItemPickerComponent implements OnInit {
 
-  public query$: ReplaySubject<string> = new ReplaySubject<string>();
+  public query$: BehaviorSubject<string> = new BehaviorSubject<string>('');
 
   public results$: Observable<SearchResult[]>;
 
-  public onlyCraftable = false;
+  public onlyCraftable = this.settings.onlyRecipesInPicker;
 
   public hideAmount = false;
 
@@ -30,9 +32,12 @@ export class ItemPickerComponent implements OnInit {
 
   public multi = false;
 
+  public Region = Region;
+
   constructor(private dataService: DataService, private dialogRef: NzModalRef,
               private gt: GarlandToolsService, private htmlTools: HtmlToolsService,
-              private customItemsFacade: CustomItemsFacade, private translate: TranslateService) {
+              private customItemsFacade: CustomItemsFacade, private translate: TranslateService,
+              public settings: SettingsService) {
     this.results$ = this.query$.pipe(
       debounceTime(500),
       filter(query => {
@@ -44,7 +49,7 @@ export class ItemPickerComponent implements OnInit {
       }),
       tap(() => this.loading = true),
       switchMap(query => {
-        return this.dataService.searchItem(query, [], this.onlyCraftable).pipe(
+        return this.dataService.searchItem(query, [], this.onlyCraftable, [null, 'desc'], true).pipe(
           switchMap(results => {
             if (!this.includeCustomItems) {
               return of(results);
@@ -72,7 +77,7 @@ export class ItemPickerComponent implements OnInit {
   }
 
   /**
-   * Gets job informations from a given job id.
+   * Gets job information from a given job id.
    * @param {number} id
    * @returns {any}
    */
@@ -89,7 +94,7 @@ export class ItemPickerComponent implements OnInit {
     return this.htmlTools.generateStars(nb);
   }
 
-  close(result: SearchResult): void {
+  close(result?: SearchResult): void {
     if (this.multi) {
       this.dialogRef.close([result]);
     } else {
@@ -99,6 +104,10 @@ export class ItemPickerComponent implements OnInit {
 
   pickMulti(results: SearchResult[]): void {
     this.dialogRef.close(results.filter(r => r.selected));
+  }
+
+  nothingSelected(results: SearchResult[]): boolean {
+    return results.every(r => !r.selected);
   }
 
   ngOnInit(): void {

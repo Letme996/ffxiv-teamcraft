@@ -1,10 +1,17 @@
 <nz-input-group [nzAddOnAfter]="suffix">
-  <input #searchInput (keyup)="query$.next(searchInput.value)" nz-input nzAutoFocus
+  <input #searchInput (keyup)="!settings.disableSearchDebounce?query$.next(searchInput.value):null"
+         (keydown.enter)="query$.next(searchInput.value)"
+         (ngModelChange)="!settings.disableSearchDebounce?query$.next($event):null"
+         [ngModel]="query$.value" nz-input nzAutoFocus
          placeholder="{{'ITEMS.Item_name' | translate}}" type="text">
   <ng-template #suffix>
-    <label nz-checkbox [(ngModel)]="onlyCraftable">{{'ITEMS.Only_craftable' | translate}}</label>
+    <label nz-checkbox [(ngModel)]="onlyCraftable" (ngModelChange)="settings.onlyRecipesInPicker = $event">{{'ITEMS.Only_craftable' | translate}}</label>
   </ng-template>
 </nz-input-group>
+{{'ITEMS.Want_filters' | translate}}
+<a routerLink="/search" (click)="close()">
+  {{'ITEMS.Open_search' | translate}}
+</a>
 <ng-container *ngIf="results$ | async as results">
   <nz-list [nzDataSource]="results" [nzLoading]="loading" [nzRenderItem]="itemTemplate">
     <ng-template #itemTemplate let-result>
@@ -19,7 +26,8 @@
             </div>
           </ng-template>
           <ng-template #description>
-            <img alt="getJob(item.job)?.abbreviation"
+            <img alt="{{getJob(result.recipe.job)?.abbreviation}}"
+                 *ngIf="result.recipe?.job > 1"
                  class="crafted-by"
                  src="https://www.garlandtools.org/db/images/{{getJob(result.recipe.job)?.abbreviation}}.png">
             {{result.recipe.lvl}}
@@ -28,7 +36,7 @@
         </nz-list-item-meta>
         <ng-template #content>
           <div fxLayout="row" fxLayoutGap="5px">
-            <nz-input-group *ngIf="!hideAmount" [nzAddOnBefore]="result.recipe !== undefined?addCrafts:null"
+            <nz-input-group *ngIf="!hideAmount" [nzAddOnBefore]="null | ifRegions:[Region.China, Region.Korea]:(result.recipe !== undefined?addCrafts:null)"
                             [nzCompact]="true">
               <input [(ngModel)]="result.amount" class="amount-input" nz-input type="number">
               <ng-template #addCrafts>
@@ -45,5 +53,6 @@
       </nz-list-item>
     </ng-template>
   </nz-list>
-  <button nz-button nzBlock (click)="pickMulti(results)" *ngIf="multi">{{'LISTS.Add_selection_to_list' | translate}}</button>
+  <button nz-button nzBlock (click)="pickMulti(results)" [disabled]="nothingSelected(results)"
+          *ngIf="multi">{{'LISTS.Add_selection_to_list' | translate}}</button>
 </ng-container>

@@ -11,8 +11,7 @@ import { TooltipModule } from '../../modules/tooltip/tooltip.module';
 import { CustomSimulatorPageComponent } from './components/custom-simulator-page/custom-simulator-page.component';
 import { RotationsPageComponent } from './components/rotations-page/rotations-page.component';
 import { MacroPopupComponent } from './components/macro-popup/macro-popup.component';
-import { ClipboardModule } from 'ngx-clipboard';
-// import {CustomLinksModule} from '../custom-links/custom-links.module';
+
 import { MaintenanceGuard } from '../maintenance/maintenance.guard';
 import { VersionLockGuard } from '../version-lock/version-lock.guard';
 import { SimulationMinStatsPopupComponent } from './components/simulation-min-stats-popup/simulation-min-stats-popup.component';
@@ -22,7 +21,7 @@ import { RecipeChoicePopupComponent } from './components/recipe-choice-popup/rec
 import { RotationPanelComponent } from './components/rotation-panel/rotation-panel.component';
 import { CoreModule } from '../../core/core.module';
 import { SettingsModule } from '../../modules/settings/settings.module';
-import { NgZorroAntdModule } from 'ng-zorro-antd';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 import { FullpageMessageModule } from '../../modules/fullpage-message/fullpage-message.module';
 import { RotationFolderPageComponent } from './components/rotation-folder-page/rotation-folder-page.component';
 import { StepByStepReportComponent } from './components/step-by-step-report/step-by-step-report.component';
@@ -46,6 +45,14 @@ import { CommunityRotationsPageComponent } from './components/community-rotation
 import { CommunityRotationPopupComponent } from './components/community-rotation-popup/community-rotation-popup.component';
 import { SolverPopupComponent } from './components/solver-popup/solver-popup.component';
 import { SimulatorOpenerComponent } from './components/simulator-opener/simulator-opener.component';
+import { SimulationSharePopupComponent } from './components/simulation-share-popup/simulation-share-popup.component';
+import { DragDropModule } from '@angular/cdk/drag-drop';
+import { SimulationResultComponent } from './components/simulation-result/simulation-result.component';
+import { AntdSharedModule } from '../../core/antd-shared.module';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { LazyScrollModule } from '../../modules/lazy-scroll/lazy-scroll.module';
+import { RotationResultTagComponent } from './components/rotation-result-tag/rotation-result-tag.component';
 
 const routes: Routes = [
   {
@@ -122,16 +129,20 @@ const routes: Routes = [
     CustomLinksModule,
     RotationTipsModule,
 
-    NgZorroAntdModule,
+    AntdSharedModule,
+    NzIconModule,
 
-    ClipboardModule,
 
     // CustomLinksModule,
     TooltipModule,
     PipesModule,
     CoreModule,
     SettingsModule,
-    DirtyModule
+    DirtyModule,
+    DragDropModule,
+    NzPaginationModule,
+    NzCheckboxModule,
+    LazyScrollModule
   ],
   declarations: [
     CustomSimulatorPageComponent,
@@ -150,21 +161,18 @@ const routes: Routes = [
     CommunityRotationsPageComponent,
     CommunityRotationPopupComponent,
     SolverPopupComponent,
-    SimulatorOpenerComponent
+    SimulatorOpenerComponent,
+    SimulationSharePopupComponent,
+    SimulationResultComponent,
+    RotationResultTagComponent
   ],
   exports: [
     RotationPanelComponent,
     RotationFolderPanelComponent,
-    ActionComponent
-  ],
-  entryComponents: [
-    MacroPopupComponent,
-    SimulationMinStatsPopupComponent,
-    RecipeChoicePopupComponent,
-    StepByStepReportComponent,
-    RotationTipsPopupComponent,
-    CommunityRotationPopupComponent,
-    SolverPopupComponent
+    ActionComponent,
+    SimulatorComponent,
+    SimulationResultComponent,
+    RotationResultTagComponent
   ],
   providers: [
     ConsumablesService,

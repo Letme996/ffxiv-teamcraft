@@ -1,18 +1,12 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
 import { CraftingRotation } from '../../../../model/other/crafting-rotation';
-import {
-  CrafterStats,
-  CraftingAction,
-  CraftingActionsRegistry,
-  GearSet,
-  Simulation,
-  SimulationResult
-} from '@ffxiv-teamcraft/simulator';
+import { CraftingAction, GearSet, Simulation, SimulationResult, SimulationService } from '../../../../core/simulation/simulation.service';
 import { BehaviorSubject, combineLatest, Observable, ReplaySubject } from 'rxjs';
 import { filter, map, shareReplay, tap } from 'rxjs/operators';
 import { LinkToolsService } from '../../../../core/tools/link-tools.service';
 import { RotationsFacade } from '../../../../modules/rotations/+state/rotations.facade';
-import { NzMessageService, NzModalService } from 'ng-zorro-antd';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { TranslateService } from '@ngx-translate/core';
 import { NameQuestionPopupComponent } from '../../../../modules/name-question-popup/name-question-popup/name-question-popup.component';
 import { AuthFacade } from '../../../../+state/auth.facade';
@@ -22,7 +16,6 @@ import { TeamcraftUser } from '../../../../model/user/teamcraft-user';
 import { CustomLinksFacade } from '../../../../modules/custom-links/+state/custom-links.facade';
 import { Router } from '@angular/router';
 import { MacroPopupComponent } from '../macro-popup/macro-popup.component';
-import { foods } from '../../../../core/data/sources/foods';
 import { medicines } from '../../../../core/data/sources/medicines';
 import { freeCompanyActions } from '../../../../core/data/sources/free-company-actions';
 import { ConsumablesService } from '../../model/consumables.service';
@@ -33,11 +26,14 @@ import { BonusType } from '../../model/consumable-bonus';
 import { Craft } from '../../../../model/garland-tools/craft';
 import { IpcService } from '../../../../core/electron/ipc.service';
 import { PlatformService } from '../../../../core/tools/platform.service';
+import { SettingsService } from 'apps/client/src/app/modules/settings/settings.service';
+import { LazyDataService } from '../../../../core/data/lazy-data.service';
 
 @Component({
   selector: 'app-rotation-panel',
   templateUrl: './rotation-panel.component.html',
-  styleUrls: ['./rotation-panel.component.less']
+  styleUrls: ['./rotation-panel.component.less'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RotationPanelComponent implements OnInit {
 
@@ -61,7 +57,7 @@ export class RotationPanelComponent implements OnInit {
 
   actions$: Observable<CraftingAction[]>;
 
-  permissionLevel$: Observable<PermissionLevel> = combineLatest(this.rotation$, this.authFacade.userId$).pipe(
+  permissionLevel$: Observable<PermissionLevel> = combineLatest([this.rotation$, this.authFacade.userId$]).pipe(
     map(([rotation, userId]) => rotation.getPermissionLevel(userId))
   );
 
@@ -80,39 +76,48 @@ export class RotationPanelComponent implements OnInit {
 
   public simulation$: Observable<SimulationResult>;
 
+  private get simulator() {
+    return this.simulationService.getSimulator(this.settings.region);
+  }
+
+  private get registry() {
+    return this.simulator.CraftingActionsRegistry;
+  }
+
   constructor(private linkTools: LinkToolsService,
               private rotationsFacade: RotationsFacade, private message: NzMessageService,
-              private translate: TranslateService, private dialog: NzModalService,
+              public translate: TranslateService, private dialog: NzModalService,
               public authFacade: AuthFacade, private customLinksFacade: CustomLinksFacade,
               private router: Router, public consumablesService: ConsumablesService,
               public freeCompanyActionsService: FreeCompanyActionsService, private ipc: IpcService,
-              public platformService: PlatformService) {
+              public platformService: PlatformService, private simulationService: SimulationService,
+              private settings: SettingsService, private lazyData: LazyDataService) {
     this.actions$ = this.rotation$.pipe(
       filter(rotation => rotation !== null),
-      map(rotation => CraftingActionsRegistry.deserializeRotation(rotation.rotation))
+      map(rotation => this.registry.deserializeRotation(rotation.rotation))
     );
 
-    this.customLink$ = combineLatest(this.customLinksFacade.myCustomLinks$, this.rotation$).pipe(
+    this.customLink$ = combineLatest([this.customLinksFacade.myCustomLinks$, this.rotation$]).pipe(
       filter(([, rotation]) => rotation !== null),
       map(([links, rotation]) => links.find(link => link.redirectTo === this.getRouterLink(rotation).substr(1))),
       tap(link => link !== undefined ? this.syncLinkUrl = link.getUrl() : null),
       shareReplay(1)
     );
 
-    this.foods = consumablesService.fromData(foods);
+    this.foods = consumablesService.fromLazyData(this.lazyData.data.foods);
     this.medicines = consumablesService.fromData(medicines);
     this.freeCompanyActions = freeCompanyActionsService.fromData(freeCompanyActions);
 
   }
 
   ngOnInit(): void {
-    this.simulation$ = combineLatest(this.rotation$, this.authFacade.gearSets$, this.simulationSet$).pipe(
+    this.simulation$ = combineLatest([this.rotation$, this.authFacade.gearSets$, this.simulationSet$]).pipe(
       filter(([rotation, , stats]) => rotation !== null && stats !== null),
       map(([rotation, gearSets, stats]) => {
         const food = this.foods.find(f => this.rotation.food && f.itemId === this.rotation.food.id && f.hq === this.rotation.food.hq);
         const medicine = this.medicines.find(f => this.rotation.medicine && f.itemId === this.rotation.medicine.id && f.hq === this.rotation.medicine.hq);
         const fcActions = this.freeCompanyActions.filter(action => this.rotation.freeCompanyActions.indexOf(action.actionId) > -1);
-        const crafterStats = new CrafterStats(
+        const crafterStats = new this.simulator.CrafterStats(
           stats.jobId,
           stats.craftsmanship + this.getBonusValue('Craftsmanship', stats.craftsmanship, food, medicine, fcActions),
           stats.control + this.getBonusValue('Control', stats.craftsmanship, food, medicine, fcActions),
@@ -120,7 +125,8 @@ export class RotationPanelComponent implements OnInit {
           stats.specialist,
           stats.level,
           gearSets.length > 0 ? gearSets.map(set => set.level) as [number, number, number, number, number, number, number, number] : [70, 70, 70, 70, 70, 70, 70, 70]);
-        return new Simulation(rotation.recipe as Craft, CraftingActionsRegistry.deserializeRotation(rotation.rotation), crafterStats).run(true);
+        const recipe = this.lazyData.data.recipes.find(r => r.id === rotation.recipe.id);
+        return new this.simulator.Simulation(recipe as Craft, this.registry.deserializeRotation(rotation.rotation), crafterStats).run(true);
       })
     );
   }
@@ -179,10 +185,6 @@ export class RotationPanelComponent implements OnInit {
     this.customLinksFacade.createCustomLink(rotation.getName(), this.getRouterLink(rotation).substr(1), user);
   }
 
-  afterCustomLinkCopy(): void {
-    this.message.success(this.translate.instant('CUSTOM_LINKS.Share_link_copied'));
-  }
-
   getLink(rotation: CraftingRotation): string {
     return this.linkTools.getLink(this.getRouterLink(rotation));
   }
@@ -199,7 +201,7 @@ export class RotationPanelComponent implements OnInit {
     this.dialog.create({
       nzContent: MacroPopupComponent,
       nzComponentParams: {
-        rotation: CraftingActionsRegistry.deserializeRotation(this.rotation.rotation),
+        rotation: this.registry.deserializeRotation(this.rotation.rotation),
         job: this.rotation.recipe.job,
         simulation: simulation.clone(),
         food: this.foods.find(f => this.rotation.food && f.itemId === this.rotation.food.id && f.hq === this.rotation.food.hq),
@@ -226,10 +228,6 @@ export class RotationPanelComponent implements OnInit {
     ).subscribe(r => {
       this.rotationsFacade.updateRotation(r);
     });
-  }
-
-  afterLinkCopy(): void {
-    this.message.success(this.translate.instant('SIMULATOR.Share_link_copied'));
   }
 
   delete(rotation: CraftingRotation): void {

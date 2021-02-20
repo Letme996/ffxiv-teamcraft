@@ -5,8 +5,7 @@ import { XivapiEndpoint, XivapiService } from '@xivapi/angular-client';
 import { filter, map, shareReplay } from 'rxjs/operators';
 import { Alarm } from '../../../core/alarms/alarm';
 import { AlarmsFacade } from '../../../core/alarms/+state/alarms.facade';
-import { NzModalRef } from 'ng-zorro-antd';
-import * as weathers from '../../../core/data/sources/weathers.json';
+import { NzModalRef } from 'ng-zorro-antd/modal';
 import { weatherIndex } from '../../../core/data/sources/weather-index';
 import * as _ from 'lodash';
 
@@ -19,9 +18,31 @@ export class CustomAlarmPopupComponent implements OnInit {
 
   form: FormGroup;
 
-  public maps$: Observable<any[]>;
+  /** Spawn are limited to hours (0 to 23) **/
+  public SPAWN_VALIDATOR = {
+    min: 0,
+    max: 23
+  };
 
-  public weatherIds: any[] = Object.keys(weathers).map(key => +key);
+  /** Duration is only limited to hours (0 to 23) **/
+  public DURATION_VALIDATOR = {
+    min: 0,
+    max: 23
+  };
+
+  /** X is only limited from 0 to 99 **/
+  public X_VALIDATOR = {
+    min: 0,
+    max: 99
+  };
+
+  /** Y is only limited from 0 to 99 **/
+  public Y_VALIDATOR = {
+    min: 0,
+    max: 99
+  };
+
+  public maps$: Observable<any[]>;
 
   /**
    * Should we just return the alarm instead of creating it directly?
@@ -52,7 +73,8 @@ export class CustomAlarmPopupComponent implements OnInit {
 
   public mapWeathers$: Observable<number[]>;
 
-  constructor(private fb: FormBuilder, private xivapi: XivapiService, private alarmsFacade: AlarmsFacade, private modalRef: NzModalRef) {
+  constructor(private fb: FormBuilder, private xivapi: XivapiService, private alarmsFacade: AlarmsFacade,
+              private modalRef: NzModalRef) {
     this.maps$ = this.xivapi.getList(XivapiEndpoint.Map, {
       columns: ['ID', 'PlaceName.ID', 'TerritoryType.WeatherRate'],
       max_items: 1000
@@ -71,9 +93,6 @@ export class CustomAlarmPopupComponent implements OnInit {
       alarm.spawns = data.spawnsTwice ? [data.spawn, (data.spawn + 12) % 24] : [data.spawn];
       alarm.duration = data.duration;
     }
-    if (data.slot !== undefined) {
-      alarm.slot = data.slot;
-    }
     if (data.type !== undefined) {
       alarm.type = data.type;
     }
@@ -87,7 +106,7 @@ export class CustomAlarmPopupComponent implements OnInit {
       alarm.weathersFrom = data.weathersFrom;
     }
     if (data.x !== undefined || data.y !== undefined) {
-      alarm.coords = { x: data.x || 0, y: data.y || 0 };
+      alarm.coords = {x: data.x || 0, y: data.y || 0, z: data.z || 0};
     }
     if (this.returnAlarm) {
       this.modalRef.close(<Alarm>alarm);
@@ -100,28 +119,37 @@ export class CustomAlarmPopupComponent implements OnInit {
   ngOnInit(): void {
     this.form = this.fb.group({
       name: [this.name, Validators.required],
-      spawn: [this.spawn, [Validators.min(0), Validators.max(24)]],
+      spawn: [this.spawn, [Validators.min(this.SPAWN_VALIDATOR.min), Validators.max(this.SPAWN_VALIDATOR.max)]],
       spawnsTwice: [this.spawnsTwice],
-      duration: [this.duration],
-      slot: [this.slot],
+      duration: [this.duration, [Validators.min(this.DURATION_VALIDATOR.min), Validators.max(this.DURATION_VALIDATOR.max)]],
       type: [this.type, [Validators.min(0), Validators.max(4)]],
       mapId: [this.mapId, Validators.required],
-      x: [this.x],
-      y: [this.y],
+      x: [this.x, [Validators.min(this.X_VALIDATOR.min), Validators.max(this.X_VALIDATOR.max)]],
+      y: [this.y, [Validators.min(this.Y_VALIDATOR.min), Validators.max(this.Y_VALIDATOR.max)]],
       weathers: [this.weathers],
       weathersFrom: [this.weathersFrom]
     });
 
-    this.mapWeathers$ = combineLatest(this.form.valueChanges, this.maps$).pipe(
+    this.mapWeathers$ = combineLatest([this.form.valueChanges, this.maps$]).pipe(
       map(([form, maps]) => {
         return maps.find(m => m.ID === form.mapId);
       }),
       filter(m => m !== undefined),
-      map((m: {TerritoryType: {WeatherRate: number}}) => {
+      map((m: { TerritoryType: { WeatherRate: number } }) => {
         return _.uniq(weatherIndex[m.TerritoryType.WeatherRate].map(row => +row.weatherId)) as number[];
       }),
       shareReplay(1)
     );
   }
 
+  public adjust(prop: string, amount: number): void {
+    const oldValue = this.form.value[prop];
+    const newValue = this.form.value[prop] + amount;
+
+    this.form.patchValue({[prop]: newValue});
+
+    if (this.form.controls[prop].invalid) {
+      this.form.patchValue({[prop]: oldValue})
+    }
+  }
 }

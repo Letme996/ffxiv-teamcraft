@@ -1,13 +1,9 @@
-<!--<nz-alert nzBanner [nzDescription]="'CURRENCY_SPENDING.Disabled_description' | translate"-->
-<!--          [nzMessage]="'CURRENCY_SPENDING.Disabled' | translate"-->
-<!--          nzType="error" class="dark"></nz-alert>-->
-
 <div fxLayout="column" fxLayoutAlign="center center" fxLayoutGap="10px">
   <div fxLayout="column" fxLayoutAlign="center center">
     <h2>{{'CURRENCY_SPENDING.Title' | translate}}</h2>
     <i>{{'CURRENCY_SPENDING.Description' | translate}}</i>
   </div>
-  <div fxLayout="row" fxLayoutGap="5px">
+  <div fxLayout="row" fxLayoutGap="5px" class="currency-select">
     <nz-select
       (ngModelChange)="currency$.next($event)"
       [ngModel]="null"

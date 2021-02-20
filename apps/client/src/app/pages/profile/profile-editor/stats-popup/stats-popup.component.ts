@@ -3,7 +3,7 @@ import { first, map } from 'rxjs/operators';
 import { Observable } from 'rxjs';
 import { GearSet } from '@ffxiv-teamcraft/simulator';
 import { AuthFacade } from '../../../../+state/auth.facade';
-import { NzModalRef } from 'ng-zorro-antd';
+import { NzModalRef } from 'ng-zorro-antd/modal';
 
 @Component({
   selector: 'app-stats-popup',
@@ -44,7 +44,7 @@ export class StatsPopupComponent implements OnInit {
     );
     this.set$ = this.allSets$.pipe(
       map(allSets => {
-        return allSets.find(set => set.jobId === this.jobId);
+        return {...allSets.find(set => set.jobId === this.jobId)};
       })
     );
   }

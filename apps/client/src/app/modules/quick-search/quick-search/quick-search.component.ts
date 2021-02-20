@@ -1,4 +1,4 @@
-import { Component, Inject, Optional, PLATFORM_ID } from '@angular/core';
+import { Component, Inject, OnInit, Optional, PLATFORM_ID } from '@angular/core';
 import { SearchType } from '../../../pages/search/search-type';
 import { BehaviorSubject, combineLatest, merge, Subject } from 'rxjs';
 import { SearchResult } from '../../../model/search/search-result';
@@ -8,14 +8,14 @@ import { SettingsService } from '../../settings/settings.service';
 import { TranslateService } from '@ngx-translate/core';
 import { DataService } from '../../../core/api/data.service';
 import { TeamcraftComponent } from '../../../core/component/teamcraft-component';
-import { NzModalRef } from 'ng-zorro-antd';
+import { NzModalRef } from 'ng-zorro-antd/modal';
 
 @Component({
   selector: 'app-quick-search',
   templateUrl: './quick-search.component.html',
   styleUrls: ['./quick-search.component.less']
 })
-export class QuickSearchComponent extends TeamcraftComponent {
+export class QuickSearchComponent extends TeamcraftComponent implements OnInit {
 
   searchTypes = SearchType;
 
@@ -24,7 +24,7 @@ export class QuickSearchComponent extends TeamcraftComponent {
   public cleanResults$: Subject<SearchResult[]> = new Subject<SearchResult[]>();
 
   public searchType$: BehaviorSubject<SearchType> =
-    new BehaviorSubject<SearchType>(<SearchType>localStorage.getItem('search:type') || SearchType.ANY);
+    new BehaviorSubject<SearchType>(<SearchType>localStorage.getItem('search:type') || SearchType.ITEM);
 
   public results$ = merge(this.cleanResults$, combineLatest([this.query$.pipe(debounceTime(800)), this.searchType$]).pipe(
     filter(([query]) => query.length > 1),
@@ -64,6 +64,13 @@ export class QuickSearchComponent extends TeamcraftComponent {
     if (this.modal) {
       this.modal.close();
     }
+  }
+
+  ngOnInit(): void {
+    setTimeout(() => {
+      const element: any = document.getElementById('search-input').getElementsByClassName('ant-select-selection-search-input').item(0);
+      element.focus();
+    }, 500);
   }
 
 }

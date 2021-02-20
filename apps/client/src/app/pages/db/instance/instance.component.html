@@ -1,5 +1,5 @@
 <ng-container *ngIf="gtData$ | async as gtData; else loader">
-  <div *ngIf="xivapiInstance$ | async as xivapiInstance" [style.padding]="'0 50px' | ifMobile: '0'"
+  <div *ngIf="xivapiInstance$ | async as xivapiInstance" [style.padding]="'0 25px' | ifMobile: '0'"
        fxLayout="column" fxLayoutGap="10px">
     <div class="top-bar" fxFlex="1 1 auto" fxLayout="row" fxLayout.lt-md="column"
          fxLayoutAlign="flex-start flex-start" fxLayoutGap="5px" fxLayoutGap.lt-md="10px">
@@ -11,10 +11,10 @@
           <div fxLayout="column" fxLayoutAlign="flex-start flex-start">
             <h2 class="item-name">{{xivapiInstance.ID | instanceName | i18n}}</h2>
             <div *ngIf="xivapiInstance.ContentType" class="item-kind">
-              {{xivapiInstance.ContentType | xivapiI18n}}
+              {{xivapiInstance.ContentType | xivapiL12n: 'contentTypes' | i18n}}
             </div>
             <div *ngIf="xivapiInstance.GamePatch" class="patch">
-              {{xivapiInstance.GamePatch | xivapiI18n}}
+              {{xivapiInstance.GamePatch | xivapiL12n: 'patchs' | i18n}}
               <app-db-button [id]="xivapiInstance.GamePatch.ID" type="patch"></app-db-button>
             </div>
           </div>
@@ -22,32 +22,16 @@
         <img [src]="xivapiInstance.Banner | xivapiIcon" alt="" class="instance-banner">
         <div *ngIf="links$ | async as links" class="links" fxLayout="row" fxLayoutAlign="flex-start center"
              fxLayoutGap="5px">
-          <a *ngFor="let link of links" [href]="link.url" [nzTitle]="link.title" nz-tooltip target="_blank">
+          <a *ngFor="let link of links" [href]="link.url" [nzTooltipTitle]="link.title" nz-tooltip target="_blank">
             <img [alt]="link.title" [src]="link.icon" class="link-icon">
           </a>
         </div>
       </div>
       <div fxFlex="1 1 auto">
-        <p *ngIf="xivapiInstance.Description" [innerHTML]="xivapiInstance | xivapiI18n: 'Description' | xivUIText"></p>
+        <p *ngIf="xivapiInstance.Description" [innerHTML]="xivapiInstance | xivapiL12n: 'instanceDescriptions':'Description' | i18n | xivUIText"></p>
       </div>
-      <div fxFlex="0 0 300px" fxFlex.lt-md="1 1 auto" fxLayout="column" fxLayoutGap="5px">
-        <div fxLayout="row" fxLayoutAlign="flex-start center" fxLayoutGap="5px">
-          <img alt="EN" class="language-flag" src="./assets/icons/english.png">
-          <div>{{xivapiInstance.Name_en}}</div>
-        </div>
-        <div fxLayout="row" fxLayoutAlign="flex-start center" fxLayoutGap="5px">
-          <img alt="DE" class="language-flag" src="./assets/icons/german.png">
-          <div>{{xivapiInstance.Name_de}}</div>
-        </div>
-        <div fxLayout="row" fxLayoutAlign="flex-start center" fxLayoutGap="5px">
-          <img alt="FR" class="language-flag" src="./assets/icons/french.png">
-          <div>{{xivapiInstance.Name_fr}}</div>
-        </div>
-        <div fxLayout="row" fxLayoutAlign="flex-start center" fxLayoutGap="5px">
-          <img alt="JA" class="language-flag" src="./assets/icons/japanese.png">
-          <div>{{xivapiInstance.Name_ja}}</div>
-        </div>
-      </div>
+      <app-i18n-display fxFlex="0 0 300px" fxFlex.lt-md="1 1 auto" fxLayout="column" fxLayoutGap="5px"
+                        [value]="xivapiInstance | instanceName"></app-i18n-display>
     </div>
     <div class="details-container" fxLayout="row wrap" fxLayoutGap="5px">
       <div class="details-block">
@@ -84,7 +68,9 @@
     </div>
     <app-db-comments *ngIf="settings.dbCommentsPosition === 'TOP'" [id]="xivapiInstance.ID"
                      type="instance"></app-db-comments>
-    <nz-divider [nzText]="'DB.Fights' | translate" nzOrientation="left"></nz-divider>
+    <div>
+      <nz-divider [nzText]="'DB.Fights' | translate" nzOrientation="left"></nz-divider>
+    </div>
     <div fxLayout="row wrap" fxLayout.lt-md="column" fxLayoutGap="10px">
       <nz-card *ngFor="let fight of gtData.instance.fights" [nzTitle]="title" class="details-card" fxFlex="1 1 auto"
                nzBordered="false">
@@ -127,7 +113,9 @@
         </div>
       </nz-card>
     </div>
-    <nz-divider [nzText]="'DB.Instance_details' | translate" nzOrientation="left"></nz-divider>
+    <div>
+      <nz-divider [nzText]="'DB.Instance_details' | translate" nzOrientation="left"></nz-divider>
+    </div>
     <div *ngIf="xivapiInstance.ContentFinderCondition.TerritoryType.Map" fxLayout="row wrap" fxLayout.lt-md="column"
          fxLayoutGap="10px">
       <nz-card [nzTitle]="mapTitle" class="details-card" fxFlex="1 1 auto" nzBordered="false">

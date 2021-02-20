@@ -16,15 +16,15 @@
           </nz-list-item-meta>
         </nz-list-item>
         <ng-template #share>
-          <button (cbOnSuccess)="afterLinkCopy()" [cbContent]="linkDisplay.link.getUrl()" [nzTitle]="(linkDisplay.link.type === 'link'?'CUSTOM_LINKS.Copy_custom_link':'LIST_TEMPLATE.Copy_template_url') | translate"
-                  ngxClipboard
+          <button [clipboardSuccessMessage]="'Share_link_copied' | translate" [clipboard]="linkDisplay.link.getUrl"
+                  [nzTooltipTitle]="(linkDisplay.link.type === 'link'?'CUSTOM_LINKS.Copy_custom_link':'LIST_TEMPLATE.Copy_template_url') | translate"
                   nz-button
                   nz-tooltip nzShape="circle" nzType="primary">
             <i nz-icon nzType="share-alt"></i>
           </button>
         </ng-template>
         <ng-template #delete>
-          <button (nzOnConfirm)="deleteLink(linkDisplay.link.$key)" [nzTitle]="'Confirmation' | translate" nz-button
+          <button (nzOnConfirm)="deleteLink(linkDisplay.link.$key)" [nzPopconfirmTitle]="'Confirmation' | translate" nz-button
                   nz-popconfirm
                   nzShape="circle" nzType="danger">
             <i nz-icon nzType="delete"></i>

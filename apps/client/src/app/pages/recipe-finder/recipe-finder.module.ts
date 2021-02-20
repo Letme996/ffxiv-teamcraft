@@ -3,8 +3,6 @@ import { CommonModule } from '@angular/common';
 import { RecipeFinderComponent } from './recipe-finder/recipe-finder.component';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { NgZorroAntdModule } from 'ng-zorro-antd';
-import { ClipboardModule } from 'ngx-clipboard';
 import { PipesModule } from '../../pipes/pipes.module';
 import { CoreModule } from '../../core/core.module';
 import { ListModule } from '../../modules/list/list.module';
@@ -16,6 +14,9 @@ import { VersionLockGuard } from '../version-lock/version-lock.guard';
 import { ItemIconModule } from '../../modules/item-icon/item-icon.module';
 import { MarketboardModule } from '../../modules/marketboard/marketboard.module';
 import { ClipboardImportPopupComponent } from './clipboard-import-popup/clipboard-import-popup.component';
+import { InventoryImportPopupComponent } from './inventory-import-popup/inventory-import-popup.component';
+import { AntdSharedModule } from '../../core/antd-shared.module';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 
 const routes: Routes = [
   {
@@ -26,24 +27,22 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  declarations: [RecipeFinderComponent, ClipboardImportPopupComponent],
-  entryComponents: [ClipboardImportPopupComponent],
+  declarations: [RecipeFinderComponent, ClipboardImportPopupComponent, InventoryImportPopupComponent],
   imports: [
     CommonModule,
     FormsModule,
     TranslateModule,
-    NgZorroAntdModule,
-    ClipboardModule,
+    AntdSharedModule,
     PipesModule,
     CoreModule,
     ListModule,
     FlexLayoutModule,
     FullpageMessageModule,
-    ClipboardModule,
 
     RouterModule.forChild(routes),
     ItemIconModule,
-    MarketboardModule
+    MarketboardModule,
+    NzPaginationModule
   ]
 })
 export class RecipeFinderModule {

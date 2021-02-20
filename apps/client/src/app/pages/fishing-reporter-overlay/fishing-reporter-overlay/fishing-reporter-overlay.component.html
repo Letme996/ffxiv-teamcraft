@@ -21,12 +21,22 @@
         </div>
       </div>
       <div fxLayout="row" fxLayoutAlign="space-between center">
+        <div>{{'DB.FISH.OVERLAY.Time_since_thrown' | translate}}</div>
+        <div>{{throwTime$ | async}}s</div>
+      </div>
+      <div fxLayout="row" fxLayoutAlign="space-between center">
         <div>{{'DB.FISH.OVERLAY.Mooch' | translate}}</div>
         <div>{{(state.mooch ? 'Yes' : 'No') | translate}}</div>
       </div>
       <div fxLayout="row" fxLayoutAlign="space-between center">
         <div>{{'DB.FISH.OVERLAY.Spot' | translate}}</div>
-        <div *ngIf="state.spot; else unknown">{{state.spot.zoneId | placeName | i18n}}</div>
+        <div fxLayout="row" fxLayoutAlign="flex-end center" fxLayoutGap="5px" *ngIf="state.spot; else unknown">
+          <button nz-button nzShape="circle" nzSize="small" nz-tooltip [nzTooltipTitle]="'COMMON.Open_in_main_window' | translate"
+                  (click)="openSpotInMainWindow(state.spot)">
+            <i nz-icon nzType="info"></i>
+          </button>
+          <div>{{state.spot.zoneId | placeName | i18n}}</div>
+        </div>
       </div>
       <div fxLayout="row" fxLayoutAlign="space-between center">
         <div>{{'DB.FISH.OVERLAY.Current_weather' | translate}}</div>
@@ -53,8 +63,8 @@
       <div fxLayout="row" fxLayoutAlign="space-between center">
         <div>{{'DB.FISH.OVERLAY.Statuses' | translate}}</div>
         <div *ngIf="state.statuses; else unknown" fxLayout="row" fxLayoutGap="5px">
-          <img *ngFor="let status of state.statuses" src="{{status | statusIcon | xivapiIcon}}" nz-tooltip [nzTitle]="status | statusName | i18n"
-               alt="{{status | statusName | i18n}}">
+          <img *ngFor="let status of state.statuses" src="{{status | statusIcon | xivapiIcon}}" nz-tooltip [nzTooltipTitle]="status | statusName | i18n"
+               alt="{{status}}">
           <span *ngIf="state.statuses.length === 0">
             {{'DB.FISH.OVERLAY.No_statuses' | translate}}
           </span>
@@ -97,10 +107,6 @@
             </div>
           </div>
           <div fxLayout="row" fxLayoutAlign="space-between center">
-            <div>{{762 | statusName | i18n}}</div>
-            <div>{{(report.fishEyes ? 'Yes' : 'No') | translate}}</div>
-          </div>
-          <div fxLayout="row" fxLayoutAlign="space-between center">
             <div>{{761 | statusName | i18n}}</div>
             <div>{{(report.snagging ? 'Yes' : 'No') | translate}}</div>
           </div>
@@ -126,7 +132,7 @@
               <img class="fish-icon" *ngIf="report.weatherId > 0"
                    src="{{report.weatherId | weatherIcon | xivapiIcon}}"
                    nz-tooltip
-                   [nzTitle]="report.weatherId | weatherName | i18n"
+                   [nzTooltipTitle]="report.weatherId | weatherName | i18n"
                    alt="{{report.weatherId | weatherName | i18n}}">
               <div>{{report.weatherId | weatherName | i18n}}</div>
             </div>
@@ -137,7 +143,7 @@
               <img class="fish-icon" *ngIf="report.previousWeatherId > 0"
                    src="{{report.previousWeatherId | weatherIcon | xivapiIcon}}"
                    nz-tooltip
-                   [nzTitle]="report.previousWeatherId | weatherName | i18n"
+                   [nzTooltipTitle]="report.previousWeatherId | weatherName | i18n"
                    alt="{{report.previousWeatherId | weatherName | i18n}}">
               <div>{{report.previousWeatherId | weatherName | i18n}}</div>
             </div>

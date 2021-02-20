@@ -7,9 +7,10 @@ import { NgSerializerService } from '@kaiu/ng-serializer';
 import { HttpClient } from '@angular/common/http';
 import { ItemData } from '../../model/garland-tools/item-data';
 import { filter, map } from 'rxjs/operators';
-import { BehaviorSubject } from 'rxjs/BehaviorSubject';
-import { Observable } from 'rxjs/Observable';
-import { jobCategories } from '../data/sources/job-categories';
+import { Observable, BehaviorSubject } from 'rxjs';
+import { LazyDataService } from '../data/lazy-data.service';
+import { GtFish } from '../../model/common/gt-fish';
+import { GtNode } from '../../model/common/gt-node';
 
 @Injectable({
   providedIn: 'root'
@@ -26,7 +27,8 @@ export class GarlandToolsService {
 
   public onceLoaded$: Observable<boolean> = this.loaded$.pipe(filter(loaded => loaded));
 
-  constructor(private serializer: NgSerializerService, private http: HttpClient, @Inject(PLATFORM_ID)platform: Object) {
+  constructor(private serializer: NgSerializerService, private http: HttpClient,
+              private lazyData: LazyDataService, @Inject(PLATFORM_ID)platform: Object) {
     this.preload();
   }
 
@@ -97,9 +99,9 @@ export class GarlandToolsService {
   /**
    * Gets details about a fishing spot in garlandtools data.
    * @param {number} id
-   * @returns {any}
+   * @returns {GtFish}
    */
-  public getFishingSpots(id: number): any[] {
+  public getFishingSpots(id: number): GtFish[] {
     return this.gt.bell.fish.filter(fish => {
       return +fish.id === id;
     });
@@ -117,10 +119,14 @@ export class GarlandToolsService {
   /**
    * Gets details in a bell node (data used for garlandtools bell)
    * @param {number} id
-   * @returns {any}
+   * @returns {GtNode}
    */
-  getBellNode(id: number): any {
+  getBellNode(id: number): GtNode {
     return this.gt.bell.nodes.find(node => node.id === id);
+  }
+
+  getBellNodesForItemId(itemId:number): GtNode[]{
+    return this.gt.bell.nodes.filter(node => node.items.some(i => i.id === itemId))
   }
 
   /**
@@ -137,8 +143,8 @@ export class GarlandToolsService {
    * @returns {JobCategory[]}
    */
   getAllJobCategories(): number[] {
-    return Object.keys(jobCategories)
-      .filter(key => jobCategories[key].en !== '')
+    return Object.keys(this.lazyData.data.jobCategories)
+      .filter(key => this.lazyData.data.jobCategories[key].en !== '')
       .map(key => {
         return +key;
       });
@@ -152,7 +158,7 @@ export class GarlandToolsService {
   getJobCategories(jobs: number[]): number[] {
     // Get all keys of the given object.
     return Object.keys(this.gt.jobCategories)
-    // Get only the ones that are made for our job id.
+      // Get only the ones that are made for our job id.
       .filter(categoryId => {
         let match = true;
         jobs.forEach(job => {

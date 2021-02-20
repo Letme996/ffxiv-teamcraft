@@ -2,7 +2,8 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "../../dist/out-tsc",
-    "types": []
+    "types": [],
+    "allowSyntheticDefaultImports": true
   },
   "exclude": [
     "test.ts",
@@ -10,7 +11,10 @@
     "**/*.worker.ts",
     "karma.conf.ts"
   ],
-  "include": [
-    "**/*.ts"
+  "files": [
+    "src/main.ts",
+    "src/polyfills.ts",
+    "src/types/json-module.d.ts",
+    "src/types/window.d.ts"
   ]
 }

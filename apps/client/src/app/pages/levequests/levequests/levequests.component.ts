@@ -1,7 +1,7 @@
 import { Component, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SearchIndex, XivapiService } from '@xivapi/angular-client';
-import { NzNotificationService } from 'ng-zorro-antd';
+import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { BehaviorSubject, combineLatest, concat, Observable } from 'rxjs';
 import { debounceTime, distinctUntilChanged, filter, first, map, mergeMap, shareReplay, switchMap, takeUntil, tap } from 'rxjs/operators';
 import { GarlandToolsService } from '../../../core/api/garland-tools.service';
@@ -137,22 +137,16 @@ export class LevequestsComponent extends TeamcraftComponent implements OnInit {
             level: leve.ClassJobLevel,
             jobId: leve.ClassJobCategoryTargetID - 1,
             itemId: leve.CraftLeve.Item0TargetID,
-            itemIcon: leve.CraftLeve.Item0.Icon,
             exp: leve.ExpReward,
             gil: leve.GilReward,
             hq: this.settings.alwaysHQLeves,
+            allDeliveries: this.settings.alwaysAllDeliveries,
             amount: globalExp ? 0 : 1,
             itemQuantity: leve.CraftLeve.ItemCount0
               + leve.CraftLeve.ItemCount1
               + leve.CraftLeve.ItemCount2
               + leve.CraftLeve.ItemCount3,
-            name: {
-              en: leve.Name_en,
-              fr: leve.Name_fr,
-              de: leve.Name_de,
-              ja: leve.Name_ja,
-              ko: this.lazyData.data.koLeves[leve.ID] ? this.lazyData.data.koLeves[leve.ID].ko : leve.Name_en
-            },
+            name: this.l12n.getLeve(leve.ID),
             startPlaceId: leve.PlaceNameStart.ID,
             deliveryPlaceId: leve.LevelLevemete.Map.PlaceNameTargetID,
             repeats: leve.CraftLeve.Repeats,
@@ -227,11 +221,19 @@ export class LevequestsComponent extends TeamcraftComponent implements OnInit {
               switchMap(itemData => {
                 if (itemData.isCraft()) {
                   const craft = itemData.item.craft.find(c => c.job === leve.jobId);
-                  return this.listManager.addToList(leve.itemId, list, craft.id,
-                    leve.itemQuantity * this.craftAmount(leve));
+                  return this.listManager.addToList({
+                    itemId: leve.itemId,
+                    list: list,
+                    recipeId: craft.id,
+                    amount: leve.itemQuantity * this.craftAmount(leve)
+                  });
                 } else {
-                  return this.listManager.addToList(leve.itemId, list, null,
-                    leve.itemQuantity * this.craftAmount(leve));
+                  return this.listManager.addToList({
+                    itemId: leve.itemId,
+                    list: list,
+                    recipeId: null,
+                    amount: leve.itemQuantity * this.craftAmount(leve)
+                  });
                 }
               })
             );
@@ -263,7 +265,12 @@ export class LevequestsComponent extends TeamcraftComponent implements OnInit {
       switchMap(itemData => {
         const craft = itemData.item.craft.find(c => c.job === leve.jobId);
         return this.listManager
-          .addToList(leve.itemId, list, craft.id, leve.itemQuantity * this.craftAmount(leve))
+          .addToList({
+            itemId: leve.itemId,
+            list: list,
+            recipeId: craft.id,
+            amount: leve.itemQuantity * this.craftAmount(leve)
+          })
           .pipe(
             tap(resultList => this.listsFacade.addList(resultList)),
             mergeMap(resultList => {

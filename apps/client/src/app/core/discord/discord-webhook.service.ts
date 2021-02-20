@@ -7,7 +7,7 @@ import { Team } from '../../model/team/team';
 import { List } from '../../modules/list/model/list';
 import { LinkToolsService } from '../tools/link-tools.service';
 import { LocalizedDataService } from '../data/localized-data.service';
-import { CharacterService } from '../api/character.service';
+import { LodestoneService } from '../api/lodestone.service';
 import { WebhookSettingType } from '../../model/team/webhook-setting-type';
 import { LazyDataService } from '../data/lazy-data.service';
 import { PermissionLevel } from '../database/permissions/permission-level.enum';
@@ -21,7 +21,7 @@ export class DiscordWebhookService {
 
   constructor(private http: HttpClient, private translate: TranslateService,
               private i18n: I18nToolsService, private linkTools: LinkToolsService,
-              private l12n: LocalizedDataService, private characterService: CharacterService,
+              private l12n: LocalizedDataService, private characterService: LodestoneService,
               private lazyData: LazyDataService) {
   }
 
@@ -124,7 +124,7 @@ export class DiscordWebhookService {
       return;
     }
     const itemName = this.l12n.getItem(itemId);
-    this.characterService.getCharacter(memberId).pipe(
+    this.characterService.getUserCharacter(memberId).pipe(
       first(),
       map(character => {
         this.sendMessage(team, 'TEAMS.NOTIFICATIONS.List_progress', {
@@ -141,7 +141,7 @@ export class DiscordWebhookService {
     ).subscribe();
   }
 
-  notifyCustomItemAddition(itemName: string, itemId: number, amount: number, list: List, team: Team): void {
+  notifyCustomItemAddition(itemName: string, amount: number, list: List, team: Team): void {
     if (!team.hasSettingEnabled(WebhookSettingType.ITEM_ADDED)) {
       return;
     }
@@ -150,10 +150,10 @@ export class DiscordWebhookService {
       itemName: itemName,
       listName: list.name,
       listUrl: this.linkTools.getLink(`/list/${list.$key}`)
-    }, this.getIcon(itemId));
+    }, undefined);
   }
 
-  notifyCustomItemDeletion(itemName: string, itemId: number, amount: number, list: List, team: Team): void {
+  notifyCustomItemDeletion(itemName: string, amount: number, list: List, team: Team): void {
     if (!team.hasSettingEnabled(WebhookSettingType.ITEM_REMOVED)) {
       return;
     }
@@ -162,14 +162,14 @@ export class DiscordWebhookService {
       itemName: itemName,
       listName: list.name,
       listUrl: this.linkTools.getLink(`/list/${list.$key}`)
-    }, this.getIcon(itemId));
+    }, undefined);
   }
 
   notifyCustomItemChecked(team: Team, itemId: number, list: List, memberId: string, amount: number, itemName: string): void {
     if (!team.hasSettingEnabled(WebhookSettingType.LIST_PROGRESSION)) {
       return;
     }
-    this.characterService.getCharacter(memberId).pipe(
+    this.characterService.getUserCharacter(memberId).pipe(
       first(),
       map(character => {
         this.sendMessage(team, 'TEAMS.NOTIFICATIONS.List_progress', {
@@ -188,7 +188,7 @@ export class DiscordWebhookService {
     if (!team.hasSettingEnabled(WebhookSettingType.MEMBER_JOINED)) {
       return;
     }
-    this.characterService.getCharacter(memberId).pipe(
+    this.characterService.getUserCharacter(memberId).pipe(
       first(),
       map(character => {
         this.sendMessage(team, 'TEAMS.NOTIFICATIONS.Member_joined', {
@@ -204,7 +204,7 @@ export class DiscordWebhookService {
     if (!team.hasSettingEnabled(WebhookSettingType.MEMBER_LEFT)) {
       return;
     }
-    this.characterService.getCharacter(memberId).pipe(
+    this.characterService.getUserCharacter(memberId).pipe(
       first(),
       map(character => {
         this.sendMessage(team, 'TEAMS.NOTIFICATIONS.Member_removed', {
@@ -221,7 +221,7 @@ export class DiscordWebhookService {
       return;
     }
     const itemName = this.l12n.getItem(itemId);
-    this.characterService.getCharacter(memberId).pipe(
+    this.characterService.getUserCharacter(memberId).pipe(
       first(),
       map(character => {
         this.sendMessage(team, 'TEAMS.NOTIFICATIONS.User_assigned', {
